@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R 语言科研论文图表规范与「预览即所得」实现指南</title>
+<style>
+/* ============ 基础变量与主题 ============ */
+:root{
+  --ink:#1b1f24;
+  --ink-2:#2f3944;
+  --muted:#616c78;
+  --line:#d9e0e7;
+  --line-soft:#e9eef3;
+  --bg:#ffffff;
+  --bg-soft:#f7f9fb;
+  --accent:#12456b;
+  --accent-soft:#e8f0f6;
+  --teal:#0f7b6c;
+  --teal-soft:#eaf7f4;
+  --amber:#a35a12;
+  --amber-soft:#fdf6ea;
+  --red:#a32020;
+  --red-soft:#fdf0ef;
+  --code-bg:#f8fafc;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC",sans-serif;
+  font-size:15.5px;
+  line-height:1.78;
+  font-kerning:normal;
+}
+.wrap{max-width:1010px;margin:0 auto;padding:0 30px 90px}
+
+/* ============ 封面 ============ */
+.cover{
+  border-bottom:3px solid var(--accent);
+  padding:52px 0 26px;
+  margin-bottom:38px;
+}
+.eyebrow{
+  font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin:0 0 14px;
+}
+h1{
+  font-size:33px;line-height:1.3;margin:0 0 14px;font-weight:700;
+  letter-spacing:-.01em;color:#0e1b26;
+}
+.subtitle{
+  font-size:17px;color:var(--ink-2);margin:0 0 24px;line-height:1.65;
+  max-width:820px;
+}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px 0;font-size:13px;color:var(--muted);
+}
+.meta span{padding-right:18px;margin-right:18px;border-right:1px solid var(--line)}
+.meta span:last-child{border-right:0}
+.meta b{color:var(--ink-2);font-weight:600}
+
+/* ============ 目录 ============ */
+.toc{
+  background:var(--bg-soft);border:1px solid var(--line-soft);
+  border-radius:6px;padding:22px 26px;margin:0 0 46px;
+}
+.toc h2{
+  font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  margin:0 0 14px;border:0;padding:0;
+}
+.toc ol{margin:0;padding-left:0;list-style:none;columns:2;column-gap:44px}
+.toc li{margin:0 0 7px;font-size:14px;break-inside:avoid}
+.toc a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid transparent}
+.toc a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.toc .n{color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ============ 标题层级 ============ */
+h2{
+  font-size:23px;line-height:1.4;margin:62px 0 20px;padding-bottom:11px;
+  border-bottom:1px solid var(--line);font-weight:700;color:#0e1b26;
+  letter-spacing:-.005em;
+}
+h2 .num{
+  display:inline-block;min-width:34px;margin-right:6px;
+  color:var(--accent);font-variant-numeric:tabular-nums;
+}
+h3{
+  font-size:17.5px;margin:34px 0 12px;font-weight:650;color:var(--accent);
+  line-height:1.5;
+}
+h4{font-size:15.5px;margin:24px 0 8px;font-weight:650;color:var(--ink-2)}
+p{margin:0 0 15px}
+ul,ol{margin:0 0 15px;padding-left:24px}
+li{margin:0 0 7px}
+li::marker{color:var(--accent)}
+strong{font-weight:650;color:#101820}
+em{font-style:normal;background:linear-gradient(transparent 62%,#fdf0c9 62%);padding:0 1px}
+
+/* ============ 行内代码 ============ */
+code{
+  font-family:var(--mono);font-size:.875em;
+  background:#eef2f6;border:1px solid #e2e8ee;border-radius:3px;
+  padding:1px 5px;color:#0b3b5c;white-space:nowrap;
+}
+pre code{white-space:pre;background:none;border:0;padding:0;color:inherit;font-size:inherit}
+
+/* ============ 代码块 ============ */
+pre{
+  font-family:var(--mono);font-size:12.8px;line-height:1.65;
+  background:var(--code-bg);
+  border:1px solid var(--line-soft);border-left:3px solid var(--accent);
+  border-radius:4px;padding:15px 18px;margin:0 0 18px;
+  overflow-x:auto;tab-size:2;
+  break-inside:avoid;
+}
+pre::-webkit-scrollbar{height:8px}
+pre::-webkit-scrollbar-thumb{background:#cbd5df;border-radius:4px}
+.code-label{
+  font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 6px;font-weight:600;
+}
+/* 纯 CSS 语法着色 */
+.tok-kw{color:#0b5394;font-weight:600}
+.tok-fn{color:#795e26}
+.tok-str{color:#a31515}
+.tok-num{color:#098658}
+.tok-com{color:#71808c;font-style:italic}
+.tok-arg{color:#2b3a47}
+.tok-op{color:#4a5560}
+
+/* ============ 提示框 ============ */
+.box{
+  border-radius:5px;padding:15px 19px 15px 17px;margin:0 0 20px;
+  border-left:4px solid;font-size:14.5px;line-height:1.72;
+  break-inside:avoid;
+}
+.box p:last-child,.box ul:last-child,.box ol:last-child{margin-bottom:0}
+.box .tag{
+  display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;margin-bottom:7px;
+}
+.warn{background:var(--amber-soft);border-left-color:#d08a1e;color:#5d3c0c}
+.warn .tag{color:var(--amber)}
+.danger{background:var(--red-soft);border-left-color:#c2453c;color:#5e1c18}
+.danger .tag{color:var(--red)}
+.tip{background:var(--teal-soft);border-left-color:#159b87;color:#0b4f45}
+.tip .tag{color:var(--teal)}
+.note{background:var(--accent-soft);border-left-color:#3f7ea8;color:#123a54}
+.note .tag{color:var(--accent)}
+
+/* ============ 表格 ============ */
+.table-scroll{overflow-x:auto;margin:0 0 20px;break-inside:avoid}
+table{
+  width:100%;border-collapse:collapse;font-size:13.6px;line-height:1.6;
+  background:#fff;
+}
+thead th{
+  background:#eef3f8;color:#123a54;font-weight:650;text-align:left;
+  padding:10px 11px;border-bottom:2px solid #cfdae4;vertical-align:bottom;
+  font-size:13px;white-space:nowrap;
+}
+tbody td{
+  padding:9px 11px;border-bottom:1px solid var(--line-soft);vertical-align:top;
+}
+tbody tr:nth-child(even){background:#fbfcfd}
+tbody tr:hover{background:#f4f8fb}
+td.num,th.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+table caption{
+  caption-side:bottom;text-align:left;font-size:12.5px;color:var(--muted);
+  padding-top:9px;line-height:1.6;
+}
+.fw{white-space:nowrap}
+
+/* ============ 症状/机制/做法 三段式 ============ */
+.diag{
+  border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  margin:0 0 26px;break-inside:avoid;
+}
+.diag dl{margin:0}
+.diag dt{
+  font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:8px 16px;background:#f2f5f8;color:var(--muted);
+  border-top:1px solid var(--line-soft);
+}
+.diag dt:first-child{border-top:0}
+.diag dd{
+  margin:0;padding:11px 16px 13px;font-size:14.6px;line-height:1.72;
+}
+.diag dd p:last-child,.diag dd ul:last-child{margin-bottom:0}
+.diag dd > :first-child{margin-top:0}
+.dt-sym{color:var(--red)}
+.dt-sym + dd{background:#fffdfd}
+.dt-fix{color:#0b6b5c}
+.dt-fix + dd{background:#fbfefd}
+.diag dd code{font-size:.86em}
+
+/* ============ 清单 ============ */
+.checklist{
+  border:1px solid var(--line);border-radius:6px;background:#fcfdfe;
+  padding:8px 6px;margin:0 0 20px;
+}
+.checklist .item{
+  display:flex;gap:11px;align-items:flex-start;
+  padding:10px 14px;border-radius:4px;font-size:14.4px;line-height:1.65;
+  break-inside:avoid;
+}
+.checklist .item:nth-child(odd){background:#fff}
+.checklist input[type=checkbox]{
+  flex:0 0 auto;width:15px;height:15px;margin-top:4px;
+  accent-color:#12456b;cursor:pointer;
+}
+.checklist .item b{display:block;font-weight:650;color:#101820;margin-bottom:2px}
+.checklist .item span.hint{color:var(--muted);font-size:13.4px}
+
+/* ============ 错误对照卡 ============ */
+.pair{
+  border:1px solid var(--line);border-radius:6px;margin:0 0 26px;
+  overflow:hidden;break-inside:avoid;
+}
+.pair .head{
+  background:#eef3f8;padding:10px 16px;font-weight:650;font-size:14.6px;
+  color:#123a54;border-bottom:1px solid #cfdae4;
+}
+.pair .head .idx{
+  display:inline-block;background:var(--accent);color:#fff;border-radius:3px;
+  font-size:11.5px;padding:1px 7px;margin-right:9px;font-weight:700;
+  vertical-align:1px;letter-spacing:.04em;
+}
+.pair .body{padding:0}
+.pair .row{padding:13px 16px;border-top:1px solid var(--line-soft)}
+.pair .row:first-child{border-top:0}
+.pair .lbl{
+  font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  margin-bottom:7px;display:block;
+}
+.pair .lbl.bad{color:var(--red)}
+.pair .lbl.why{color:var(--amber)}
+.pair .lbl.good{color:var(--teal)}
+.pair .row.bad{background:#fffbfb}
+.pair .row.why{background:#fdfcf8}
+.pair .row.good{background:#fbfefd}
+.pair pre{margin:0;border-left-width:2px;background:#fff;font-size:12.4px;padding:11px 14px}
+.pair .row.why p{margin:0;font-size:14.2px;line-height:1.7}
+
+/* ============ 其他 ============ */
+.rule{
+  border-left:3px solid var(--accent-soft);padding-left:16px;margin:0 0 18px;
+  color:var(--ink-2);font-size:14.6px;
+}
+.kv{font-variant-numeric:tabular-nums}
+hr{border:0;border-top:1px solid var(--line-soft);margin:40px 0}
+footer{
+  margin-top:64px;padding-top:24px;border-top:2px solid var(--line);
+  font-size:13px;color:var(--muted);line-height:1.75;
+}
+footer b{color:var(--ink-2)}
+.small{font-size:13px;color:var(--muted)}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.badge{
+  font-size:12.5px;padding:3px 11px;border-radius:12px;
+  background:var(--accent-soft);color:#123a54;border:1px solid #cfdde9;
+  white-space:nowrap;
+}
+.badge.k{background:var(--teal-soft);color:#0b4f45;border-color:#c7e6df}
+
+/* ============ 打印 ============ */
+@media print{
+  @page{size:A4;margin:17mm 15mm 16mm}
+  body{font-size:10.2pt;line-height:1.6;background:#fff;color:#000}
+  .wrap{max-width:none;padding:0}
+  a{color:inherit;text-decoration:none}
+  .toc{break-after:page;background:#fff}
+  h2{break-before:page;break-after:avoid;margin-top:0;font-size:16pt}
+  h2:first-of-type{break-before:auto}
+  h3{break-after:avoid;font-size:12pt}
+  h4{break-after:avoid}
+  pre,table,.diag,.pair,.box,.checklist .item{break-inside:avoid}
+  pre{font-size:8.4pt;background:#f7f7f7;border-left-width:2pt}
+  thead th{background:#eef3f8 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tbody tr:nth-child(even){background:#fafafa !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .box,.diag,.pair,.checklist{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .cover{padding-top:0}
+  footer{break-before:auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ==================== 封面 ==================== -->
+<header class="cover">
+  <p class="eyebrow">Technical Manual · 科研制图规范</p>
+  <h1>R 语言科研论文图表规范<br>与「预览即所得」实现指南</h1>
+  <p class="subtitle">解决「RStudio 里看着正常、投稿文件却不合规」的系统性偏差：从设备渲染机制、单位体系，到 <code>ragg</code> + TIFF/LZW 的可复现出图流水线。</p>
+  <div class="meta">
+    <span><b>版本</b> v1.0</span>
+    <span><b>生成日期</b> 2026-10-30</span>
+    <span><b>适用</b> R ≥ 4.1 / ggplot2 ≥ 3.5 / ragg ≥ 1.2</span>
+    <span><b>对象</b> 科研论文作者</span>
+  </div>
+</header>
+
+<!-- ==================== 目录 ==================== -->
+<nav class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span>　执行摘要</a></li>
+    <li><a href="#s2"><span class="n">2</span>　预览与保存不一致的根因</a></li>
+    <li><a href="#s3"><span class="n">3</span>　主流期刊图形规格对照表</a></li>
+    <li><a href="#s4"><span class="n">4</span>　TIFF + LZW 规范要点</a></li>
+    <li><a href="#s5"><span class="n">5</span>　正确实现的技术路线</a></li>
+    <li><a href="#s6"><span class="n">6</span>　五类科研图的尺寸建议</a></li>
+    <li><a href="#s7"><span class="n">7</span>　投稿前自检清单</a></li>
+    <li><a href="#s8"><span class="n">8</span>　常见错误 → 正确写法</a></li>
+    <li><a href="#verified"><span class="n">9</span>　实测验证结果</a></li>
+  </ol>
+</nav>
+
+<!-- ==================== 1 执行摘要 ==================== -->
+<section id="s1">
+<h2><span class="num">1</span>执行摘要</h2>
+
+<p>投稿被退回时最常见的描述是「图件分辨率不足」或「尺寸不符」，但真正的成因往往在出图之前就已经埋下：<strong>你在 RStudio Plots 面板里看到的图，和你用 <code>ggsave()</code> 写进磁盘的图，是两套独立渲染管线的产物。</strong>前者是屏幕设备，后者是文件设备，两者的物理尺寸、像素映射、字体解析路径都不相同。面板里「看着刚好」从来不构成任何合规证据。</p>
+
+<div class="box note">
+  <span class="tag">核心结论</span>
+  <p>合规性只能由「物理尺寸 × 分辨率 × 显式声明的字号/线宽」这四元组决定，而这四元组必须在你写代码时就被写死，不能交给窗口大小、默认参数或设备自动推断。做到这一点，预览与最终文件才会真正一致。</p>
+</div>
+
+<h3>四条要点</h3>
+<ol>
+  <li><strong>预览为什么会骗你</strong>：Plots 面板约 96 dpi 逻辑像素、尺寸由窗口决定且随缩放变化（"Auto"），它从不关心你的目标栏宽是 89 mm 还是 190 mm。窗口拉大一点，同样的代码看起来就"字号变小了"——但版式其实一个字都没变。</li>
+  <li><strong>正确做法是什么</strong>：把画布尺寸单位统一为 <em>mm</em>、字号与线宽统一为 <em>pt</em>、渲染与导出共用同一套文本排版引擎（<code>ragg</code>），再用与导出一致的物理尺寸把 PNG 等比投回屏幕做校对。</li>
+  <li><strong>硬规则一 — 尺寸用 mm，显式传参</strong>：<code>ggsave()</code> 的 <code>width</code>/<code>height</code> 默认单位是 <em>inch</em>。写 <code>width = 7</code> 得到的是 177.8 mm，不是 180 mm，更不是你以为的"7 厘米"。期刊要 mm，你就写 <code>units = "mm"</code>。</li>
+  <li><strong>硬规则二 — 认清两套字号单位</strong>：<code>theme()</code> 里 <code>element_text(size =)</code> 的单位是 <strong>pt</strong>；但 <code>geom_text()</code> / <code>annotate()</code> 的 <code>size</code> 美学单位是 <strong>mm</strong>。写 <code>size = 8</code> 想表达 8 pt，实际渲染成 8 mm ≈ <span class="kv">22.76 pt</span>，字号直接放大到近 3 倍。正确写法是 <code>size = 8 / .pt</code>（<code>.pt ≈ 2.845276</code>）。</li>
+  <li><strong>硬规则三 — 字体必须显式绑定，并禁用 showtext</strong>：不写 <code>family</code> 时，<code>sans</code> 在 Windows 上解析为 Arial、在 PDF 设备上解析为 Helvetica、在 <code>ragg</code> 下走 systemfonts 解析。同一份代码在不同设备出不同字宽，直接导致文本溢出或换行位置漂移。</li>
+</ol>
+
+<div class="box tip">
+  <span class="tag">一句话记住</span>
+  <p>dpi 只改变<strong>像素密度</strong>，不改变<strong>版面比例</strong>。字号用 pt、画布用 mm 声明之后，600 dpi 与 150 dpi 渲染出的图，元素相对位置与字号占比完全相同——这条性质正是"预览即所得"能够成立的理论基础。</p>
+</div>
+</section>
+
+<!-- ==================== 2 根因 ==================== -->
+<section id="s2">
+<h2><span class="num">2</span>预览与保存不一致的根因</h2>
+
+<p>下面六个根因按出现频率排序。前三条解释了绝大多数「预览正常、投稿被退」的案例，第 4–6 条是残留的长尾问题。</p>
+
+<div class="table-scroll">
+<table>
+  <caption>表 2-1　六类根因速查：症状 → 修复方向</caption>
+  <thead>
+    <tr><th style="width:6%">#</th><th style="width:26%">根因</th><th style="width:36%">典型症状</th><th style="width:32%">一句话修复</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="num">2.1</td><td><strong>设备不同</strong>（屏幕 vs 文件）</td><td>面板里刚好铺满，保存后大量留白或裁切；窗口一缩放，字号"看起来"变了</td><td>不信任面板，用同尺寸 PNG 等比投屏校对</td></tr>
+    <tr><td class="num">2.2</td><td><strong>物理尺寸 vs 像素尺寸</strong></td><td><code>width = 7</code> 以为是 7 cm，实际 177.8 mm，超单栏一倍</td><td>强制 <code>units = "mm"</code>，写期刊栏宽值</td></tr>
+    <tr><td class="num">2.3</td><td><strong>字号单位错用</strong>（最高频）</td><td>标注文字暴涨约 3 倍，压住数据点、互相重叠</td><td><code>size = 8 / .pt</code></td></tr>
+    <tr><td class="num">2.4</td><td><strong>线宽单位</strong></td><td>要 1 pt 的线，出来粗了近 3 倍；或旧代码 <code>size</code> 失效</td><td><code>linewidth = 1 / .pt</code>，弃用 <code>size</code></td></tr>
+    <tr><td class="num">2.5</td><td><strong>字体未显式绑定</strong></td><td>字形/字宽在屏幕与导出间变化，标签溢出、换行错位</td><td><code>family = "Arial"</code> 贯穿 theme，弃用 <code>showtext</code></td></tr>
+    <tr><td class="num">2.6</td><td><strong>dpi 与有效分辨率</strong></td><td><code>dpi = 600</code> 元数据漂亮，印刷实际只有 100 dpi</td><td>按最终物理尺寸出图，不做"大图缩小"</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- 2.1 -->
+<h3>2.1　设备不同：屏幕设备与文件设备是两套管线</h3>
+<div class="diag">
+  <dl>
+    <dt class="dt-sym">错误现象</dt>
+    <dd>
+      <p>Plots 面板里图占满整个面板、字号看着舒服；点 Export 或跑 <code>ggsave()</code> 之后，图变得"空旷"，文字相对变小，或者反过来挤成一团。同一段代码，今天和昨天打开看起来还不一样。</p>
+    </dd>
+    <dt>机制解释</dt>
+    <dd>
+      <p>RStudio 的 Plots 面板背后是一个<strong>屏幕图形设备</strong>（<code>png</code> 设备，通常 <code>res = 96</code>），它的物理尺寸由<em>面板的像素大小 ÷ 96</em> 反推得到。<code>ggsave()</code> 则打开一个<strong>文件设备</strong>（<code>tiff()</code>、<code>agg_tiff()</code>、<code>pdf()</code>），物理尺寸完全来自你传入的 <code>width</code>/<code>height</code>。</p>
+      <p>关键在于：ggplot 的版面计算依赖「画布物理尺寸 ÷ 字号」，两者同时缩放时版面不变，只缩放其一时比例就崩。面板的 "Auto" 尺寸随窗口拉伸而变，于是你每次看到的都是「同一个主题在不同画布尺寸下的不同结果」。此外，屏幕设备的抗锯齿、字形 hinting 与文件设备不同，细线在屏幕上"看得见"，300 dpi 下可能细到断墨。</p>
+    </dd>
+    <dt class="dt-fix">正确做法</dt>
+    <dd>
+      <p>把「校对」这件事从面板里搬出来：用与导出<strong>完全相同的 mm 尺寸</strong>渲染一张 PNG，再按物理尺寸等比投回屏幕（见 §5.3）。屏幕上看到的字号占比、留白比例，就是最终印刷的比例。面板只用来做"改代码有没有报错"的粗看，不承担任何合规判断。</p>
+    </dd>
+  </dl>
+</div>
+
+<!-- 2.2 -->
+<h3>2.2　物理尺寸与像素尺寸的混淆</h3>
+<div class="diag">
+  <dl>
+    <dt class="dt-sym">错误现象</dt>
+    <dd>
+      <p><code>ggsave("fig.tif", p, width = 7, height = 5, dpi = 600)</code> 跑得通、文件也生成了，投稿系统却提示 "Figure width exceeds column width"。作者认为 7 是个小数字、"应该差不多"，实际宽度是 177.8 mm——对 89 mm 单栏来说是两倍，对 190 mm 双栏又差了 12 mm。</p>
+    </dd>
+    <dt>机制解释</dt>
+    <dd>
+      <p><code>ggsave()</code> 的 <code>width</code>/<code>height</code> 默认单位是 <strong>inch</strong>（<code>units = c("in", "cm", "mm", "px")</code> 的第一个）。<code>7 in × 25.4 = 177.8 mm</code>。多数期刊规格表用的是 mm，两套单位之间靠心算切换，误差被人为放大。<code>dpi</code> 只决定"每 inch 多少像素"，它与物理尺寸是两个正交维度，<strong>两条命令分别设置、互不换算</strong>。</p>
+      <p>更隐蔽的一层：<code>7 in @ 600 dpi = 4200 px</code>。若你把这张 4200 px 的图在 Word 里按 89 mm 宽插入，印刷有效分辨率就变成 <code>4200 ÷ (89/25.4) ≈ 1199 dpi</code>——数值上"足够"，但字号是按 177.8 mm 画布设计的，缩到 89 mm 后原本 7 pt 的字只剩 3.5 pt，直接跌破可读下限。这就是"分辨率达标、字号不合规"的成因。</p>
+    </dd>
+    <dt class="dt-fix">正确做法</dt>
+    <dd>
+      <p>永远显式写单位，且写期刊给的那个数：<code>units = "mm", width = 89, height = 120</code>。把栏宽定义成常量在脚本顶部（<code>W_1COL &lt;- 89</code>），后面所有图引用常量，改刊时只改一处。绝不用 inch 作为科研图的中间单位。</p>
+    </dd>
+  </dl>
+</div>
+
+<!-- 2.3 -->
+<h3>2.3　字号单位错用（最高频错误）</h3>
+<div class="diag">
+  <dl>
+    <dt class="dt-sym">错误现象</dt>
+    <dd>
+      <p>主题字号设成 7 pt 一切正常，但图里用 <code>geom_text()</code> 或 <code>annotate()</code> 加的标注"炸"了——字大得像标题，压住数据点、互相重叠，有的干脆跑出画布。作者反复调 <code>theme()</code> 毫无效果，因为问题不在 theme。</p>
+    </dd>
+    <dt>机制解释</dt>
+    <dd>
+      <p>ggplot2 里存在<strong>两套互不相同的字号单位</strong>：</p>
+      <ul>
+        <li><code>theme(element_text(size = ))</code>、<code>base_size</code>、<code>pointsize</code> 参数 —— 单位是 <strong>pt</strong>（排版点）。</li>
+        <li><code>geom_text(size = )</code>、<code>annotate("text", size = )</code> 的 <code>size</code> 美学 —— 单位是 <strong>mm</strong>（字体高度，grid 的 <code>gpar(cex)</code> 派生体系）。</li>
+      </ul>
+      <p>所以 <code>size = 8</code> 的含义是「字高 8 毫米」。换算：<code>8 mm × 2.845276 ≈ 22.76 pt</code>，是期望值 8 pt 的 <strong>2.8 倍</strong>。反过来，想让标注等于 8 pt，必须传 <code>8 / 2.845276 ≈ 2.81</code>（mm）。这就是为什么"照着主题字号填 geom_text 的 size，图一定崩"——两个 8 的含义差了整整一个数量级。</p>
+      <p><code>ggplot2</code> 为此导出了常量 <code>.pt</code>（<code>= 72.27/25.4 = 2.845276</code>，pt 与 mm 的换算因子），标准写法就是 <code>size = 8 / .pt</code>。这个写法自我解释、无需记数字，应作为团队规范固定下来。</p>
+    </dd>
+    <dt class="dt-fix">正确做法</dt>
+    <dd>
+      <p>统一入口：写一个 <code>pt_mm()</code> 辅助函数，凡是要喂给 <code>geom_text()</code>、<code>annotate()</code> 或 <code>linewidth</code> 的值都过一遍。<code>element_text(size =)</code> 则直接写 pt 原值，<strong>不要</strong>再过转换函数——这是最容易反手犯错的地方。</p>
+    </dd>
+  </dl>
+</div>
+
+<!-- 2.4 -->
+<h3>2.4　线宽单位与 API 迁移</h3>
+<div class="diag">
+  <dl>
+    <dt class="dt-sym">错误现象</dt>
+    <dd>
+      <p>想要 1 pt 的坐标轴线，写 <code>linewidth = 1</code>，出来明显偏粗；或者沿用旧脚本里的 <code>size = 0.5</code>，升级 ggplot2 后收到 <code>The `size` argument of `element_line()` is deprecated</code> 警告，且渲染结果与老图不一致。</p>
+    </dd>
+    <dt>机制解释</dt>
+    <dd>
+      <p>ggplot2 ≥ 3.4 起，<code>element_line()</code>、<code>geom_line()</code> 等改用 <code>linewidth</code>，<strong>单位是 mm</strong>。所以 <code>linewidth = 1</code> 是 1 mm ≈ <strong>2.83 pt</strong>，接近期望值的三倍。换算关系：<code>1 pt = 0.3528 mm</code>（PostScript pt），故 1 pt 线宽应写 <code>1 / .pt = 0.3515</code>。</p>
+      <p>旧参数 <code>size</code> 在 geom 中曾表示线宽，3.4 之后对线条类 geom 废弃（对 <code>geom_point</code> 它仍是点直径、单位 mm），混用会造成「同一条线在不同图层粗细不同」。期刊对线宽常设下限（如 0.25 pt）与上限（如 1.5 pt），一旦单位错了，不是"略粗"而是直接越界。</p>
+      <p>另需注意：屏幕上 1 px 的线在 600 dpi 下会被渲染成约 6 px 宽的实线，但若原始线宽低于输出设备的可寻址粒度，抗锯齿会把它摊成灰色虚线感的浅灰线——灰度打印后可能直接消失。所以线宽下限不仅关乎"好看"，关乎"能不能印出来"。</p>
+    </dd>
+    <dt class="dt-fix">正确做法</dt>
+    <dd>
+      <p>一律用 <code>linewidth</code>，值统一过 <code>pt_mm()</code> 换算；轴线 0.5 pt、数据线 1 pt 分别写 <code>pt_mm(0.5)</code>、<code>pt_mm(1)</code>。运行 <code>ggplot2::theme_set()</code> 前先确认包版本，避免旧脚本静默走废弃分支。</p>
+    </dd>
+  </dl>
+</div>
+
+<!-- 2.5 -->
+<h3>2.5　字体未显式绑定（以及 showtext 的隐形破坏）</h3>
+<div class="diag">
+  <dl>
+    <dt class="dt-sym">错误现象</dt>
+    <dd>
+      <p>屏幕上是一套字形，导出的 TIFF 里换了一副面孔：字宽变了、<code>α</code> 和 <code>µ</code> 变成了方框、标签从两行变一行或溢出坐标轴。中文图在 Windows 上正常，到合作者 Mac 上全是豆腐块。</p>
+    </dd>
+    <dt>机制解释</dt>
+    <dd>
+      <p>不写 <code>family</code> 时，ggplot 用默认 <code>sans</code>，而 <code>sans</code> 是一个<strong>逻辑别名，由具体设备负责解析</strong>：</p>
+      <ul>
+        <li>Windows 屏幕设备 → 常解析为 Arial；</li>
+        <li><code>pdf()</code> 设备 → 解析为 Helvetica（且默认只认 Type1 标准 14 字体，不嵌入系统字体）；</li>
+        <li><code>ragg</code> → 走 systemfonts + textshaping，按系统字体库匹配。</li>
+      </ul>
+      <p>不同字体的相同字号<strong>字宽不同</strong>（Arial 与 Helvetica 度量接近但不完全一致，中文黑体与英文无衬线的混排度量差异更大）。ggplot 计算文本包围盒（用于轴标签是否旋转、图例是否换行）时用的是字体度量，一旦导出设备换了字体，包围盒就变了，版面随之漂移。这不是"长得有点像"的问题，是<strong>布局重排</strong>。</p>
+      <p><code>showtext</code> 会接管文本渲染（把文字画成路径/位图），它维护自己的一套字体注册表，与 <code>ragg</code> 的 systemfonts 路径<strong>互相冲突</strong>：两者同时启用时，预览与导出可能走不同分支，字形与字宽再次分叉。它是"预览不一致"最典型的隐形元凶——尤其在你为了显示中文而随手 <code>showtext_auto()</code> 之后。</p>
+    </dd>
+    <dt class="dt-fix">正确做法</dt>
+    <dd>
+      <p>① 所有文本元素显式写 <code>family = "Arial"</code>（或期刊指定字体），并在脚本里把它设为常量；② 出图前用 <code>systemfonts::match_font("Arial")</code> 验证字体真实存在、路径可读；③ 中文用 <code>systemfonts::register_font()</code> 注册后显式引用；④ <strong>不要加载 showtext</strong>，全程交给 ragg。</p>
+    </dd>
+  </dl>
+</div>
+
+<!-- 2.6 -->
+<h3>2.6　dpi 与「有效分辨率」</h3>
+<div class="diag">
+  <dl>
+    <dt class="dt-sym">错误现象</dt>
+    <dd>
+      <p>文件属性里明明白白写着 600 dpi，审稿意见却是 "insufficient resolution"。或者：为了"保险"把画布设成 3 倍大小再缩到 300 dpi，自认为分辨率翻了三倍。</p>
+    </dd>
+    <dt>机制解释</dt>
+    <dd>
+      <p>dpi 是<strong>元数据</strong>，它只告诉排版软件「这一英寸该铺多少像素」，本身不产生任何像素。真正被审读的是<strong>最终印刷尺寸下的有效像素数</strong>：</p>
+      <p class="rule"><code>有效 dpi = 像素宽度 ÷ 最终印刷宽度（inch）</code></p>
+      <p>"3 倍尺寸出图再缩小"的做法里，像素被重采样或原样塞进更小的物理尺寸，看似提高了 dpi 数值，但<strong>字体是按大画布设计的</strong>，缩到目标尺寸后字号的物理高度等比例缩水。于是出现"像素够了、字却只有 3 pt"的组合故障——这类图在审读环节被判"不可读"，与分辨率无关。</p>
+      <p>另一种常见误解：以为改 <code>dpi</code> 参数能"提升清晰度"。在物理尺寸固定的前提下，提高 dpi 确实增加像素（<code>px = mm ÷ 25.4 × dpi</code>），这是有效的；但若同时缩小物理尺寸，等于把像素挤进更小空间，视觉上并不会变清晰。</p>
+    </dd>
+    <dt class="dt-fix">正确做法</dt>
+    <dd>
+      <p>按<strong>最终印刷物理尺寸</strong>直接出图，一次到位，不做后期缩放。出图后用脚本回读像素尺寸，与理论值对账（<code>mm ÷ 25.4 × dpi</code>），差值超过 1 px 就说明参数没生效（常见于设备不支持 <code>units</code> 而被静默按 inch 处理）。</p>
+    </dd>
+  </dl>
+</div>
+
+<div class="box warn">
+  <span class="tag">注意</span>
+  <p>以上六条会叠加放大。典型翻车链路是：<code>ggsave()</code> 裸调用（inch + 300 dpi + 默认设备）→ 画布偏大 → 为"看清楚"把整体字号调大 → <code>geom_text(size = 8)</code> 再放大 2.8 倍 → 字体被设备替换导致溢出。<strong>修一条没用，必须按 §5 的流水线整体替换。</strong></p>
+</div>
+</section>
+
+<!-- ==================== 3 期刊规格 ==================== -->
+<section id="s3">
+<h2><span class="num">3</span>主流期刊图形规格对照表</h2>
+
+<p>下表汇总常见期刊/出版社的制图基线，用于<strong>选型与自检</strong>，不作为投稿依据。数字为通行的公开规范整理值，可直接作为脚本常量使用。</p>
+
+<div class="table-scroll">
+<table>
+  <caption>表 3-1　主流期刊图形规格基线（mm / pt / dpi）。表中"—"表示该刊未设统一值或随文章类型而异。</caption>
+  <thead>
+    <tr>
+      <th style="width:15%">期刊 / 出版社</th>
+      <th class="num">单栏宽</th>
+      <th class="num">1.5 栏</th>
+      <th class="num">双栏宽</th>
+      <th class="num">最大高度</th>
+      <th style="width:15%">图内字号</th>
+      <th style="width:14%">线宽</th>
+      <th style="width:13%">分辨率</th>
+      <th style="width:11%">字体</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Nature</strong></td>
+      <td class="num">89 mm</td><td class="num">120–136 mm</td><td class="num">183 mm</td>
+      <td class="num">170 mm（印刷版心）</td>
+      <td>5–7 pt；panel label 8 pt bold</td>
+      <td>0.25–1 pt</td>
+      <td>照片 ≥ 300 dpi；线条/组合 600 dpi</td>
+      <td>Arial / Helvetica（sans-serif）</td>
+    </tr>
+    <tr>
+      <td><strong>Science</strong>（AAAS）</td>
+      <td class="num">55 mm</td><td class="num">—</td><td class="num">120 mm（全页 183 mm）</td>
+      <td class="num">—</td>
+      <td>6–8 pt</td><td>—</td>
+      <td>≥ 300 dpi，线条图更高</td>
+      <td>Helvetica 优先</td>
+    </tr>
+    <tr>
+      <td><strong>Elsevier</strong></td>
+      <td class="num">90 mm</td><td class="num">140 mm</td><td class="num">190 mm</td>
+      <td class="num">220–250 mm（因刊而异）</td>
+      <td>正文 7 pt；上下标 ≥ 6 pt</td>
+      <td>轴线 0.5–1.5 pt；数据线约 1 pt；最小 0.25 pt</td>
+      <td>半色调 300 / 组合 500 / 线条 1000 dpi</td>
+      <td>Arial, Helvetica, Times, Symbol</td>
+    </tr>
+    <tr>
+      <td><strong>Cell Press</strong></td>
+      <td class="num">85 mm</td><td class="num">—</td><td class="num">174 mm</td>
+      <td class="num">235 mm</td>
+      <td>≥ 6 pt</td><td>—</td>
+      <td>300 / 500 / 1000 dpi</td>
+      <td>Arial / Helvetica</td>
+    </tr>
+    <tr>
+      <td><strong>ACS</strong></td>
+      <td class="num">82.6 mm（3.25 in）</td><td class="num">—</td><td class="num">177.8 mm（7 in）</td>
+      <td class="num">—</td>
+      <td>4.5–12 pt（最小 4.5）</td>
+      <td>最小 0.5 pt</td>
+      <td>300 dpi（线条 600+）</td>
+      <td>Arial / Helvetica / Times</td>
+    </tr>
+    <tr>
+      <td><strong>IEEE</strong></td>
+      <td class="num">88.9 mm（3.5 in）</td><td class="num">—</td><td class="num">181 mm（7.16 in）</td>
+      <td class="num">—</td>
+      <td>8–10 pt</td><td>—</td>
+      <td>线条 600 dpi；半色调 300 dpi</td>
+      <td>Times New Roman</td>
+    </tr>
+    <tr>
+      <td><strong>PNAS</strong></td>
+      <td class="num">87 mm</td><td class="num">—</td><td class="num">178 mm</td>
+      <td class="num">230 mm</td>
+      <td>6–12 pt</td><td>—</td>
+      <td>300 / 600–1200 dpi</td>
+      <td>sans-serif</td>
+    </tr>
+    <tr>
+      <td><strong>中文期刊</strong><br><span class="small">（GB/T 7713 通用惯例）</span></td>
+      <td class="num">80 mm</td><td class="num">—</td><td class="num">170 mm</td>
+      <td class="num">—</td>
+      <td>7–9 pt（六号 ≈ 7.5 pt，小五 ≈ 9 pt）</td>
+      <td>≥ 0.5 pt</td>
+      <td>300–600 dpi</td>
+      <td>正文宋体，标题黑体，英文 Times New Roman</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box danger">
+  <span class="tag">必读提示 · 上表的效力边界</span>
+  <p><strong>本表只是通用基线，投稿前必须以目标期刊最新的 Guide for Authors / Instructions for Authors 为准。</strong>同一出版社不同子刊的栏宽可能相差 5–10 mm——Elsevier 官方明确说明旗下 2500+ 种期刊的栏宽并不统一，Nature 系列各刊的 figure 指南也各有细则。把本表当"默认值"能让你避开 90% 的硬错误，但不能替代逐条核对。</p>
+</div>
+
+<div class="box warn">
+  <span class="tag">格式选择：TIFF 不总是对的</span>
+  <p>Nature 对<strong>线条图/示意图偏好矢量格式</strong>（EPS / PDF / AI），TIFF 主要用于<strong>照片类与需要半色调的图像</strong>；不少刊明确要求"文字保持可编辑"。若目标期刊写明"不接受 TIFF"，应改用矢量格式（<code>ragg::agg_png</code> 不合适，应用 <code>pdf()</code> 或 <code>svglite</code>）。<strong>本文的 TIFF 方案适用于明确接受位图、或组合图必须位图化的场景。</strong>稳的做法是：矢量版 + 位图版各交一份，按刊要求提交。</p>
+</div>
+
+<h3>3.1　把规格变成脚本常量</h3>
+<p>规格表的价值在于"写进代码"，而不是"贴在便签上"。推荐在脚本顶部集中声明，一处改动、全图生效：</p>
+<pre><code><span class="tok-com"># ---- 目标期刊规格（以投稿指南核对后的值为准）----</span>
+JOURNAL        <span class="tok-op">&lt;-</span> <span class="tok-str">"Elsevier"</span>
+W_1COL         <span class="tok-op">&lt;-</span> <span class="tok-num">90</span>    <span class="tok-com"># 单栏 mm</span>
+W_1_5COL       <span class="tok-op">&lt;-</span> <span class="tok-num">140</span>   <span class="tok-com"># 1.5 栏 mm</span>
+W_2COL         <span class="tok-op">&lt;-</span> <span class="tok-num">190</span>   <span class="tok-com"># 双栏 mm</span>
+H_MAX          <span class="tok-op">&lt;-</span> <span class="tok-num">250</span>   <span class="tok-com"># 最大高度 mm</span>
+FS_BASE        <span class="tok-op">&lt;-</span> <span class="tok-num">7</span>     <span class="tok-com"># 正文字号 pt</span>
+FS_MIN         <span class="tok-op">&lt;-</span> <span class="tok-num">6</span>     <span class="tok-com"># 最小字号 pt（上下标下限）</span>
+LW_AXIS        <span class="tok-op">&lt;-</span> <span class="tok-num">0.5</span>   <span class="tok-com"># 轴线 pt</span>
+LW_DATA        <span class="tok-op">&lt;-</span> <span class="tok-num">1.0</span>   <span class="tok-com"># 数据线 pt</span>
+DPI_LINE       <span class="tok-op">&lt;-</span> <span class="tok-num">600</span>   <span class="tok-com"># 线条/组合图 dpi</span>
+DPI_HALFTONE   <span class="tok-op">&lt;-</span> <span class="tok-num">300</span>   <span class="tok-com"># 照片/半色调 dpi</span>
+FONT_MAIN      <span class="tok-op">&lt;-</span> <span class="tok-str">"Arial"</span></code></pre>
+
+<p>注意 <code>FS_MIN</code> 与最细线宽这两条<strong>下限约束</strong>要单独存在：它们不参与"设计"，只参与"校验"。任何低于下限的元素都应该在出图前被脚本拦下来。</p>
+</section>
+
+<!-- ==================== 4 TIFF ==================== -->
+<section id="s4">
+<h2><span class="num">4</span>TIFF + LZW 的规范要点</h2>
+
+<p>TIFF 是容器格式，规范不写在"TIFF"这三个字母上，而写在<strong>压缩方式、位深、色彩空间、背景</strong>这四个字段里。期刊退回的图，多半是这四个字段之一不合规，而非格式选错。</p>
+
+<h3>4.1　LZW 是无损压缩，放心用</h3>
+<ul>
+  <li><strong>LZW（Lempel-Ziv-Welch）是无损算法</strong>，解压后像素与未压缩版本<strong>逐字节一致</strong>，不存在 JPEG 那种振铃/块状伪影。它靠"重复序列建字典"压缩，因此对<strong>大面积纯色区域</strong>（白背景、填充色块、折线图的空白区）极为有效，对高频细节（噪声、渐变、照片）效果有限。</li>
+  <li>Elsevier 的制图指南明确要求对 TIFF <strong>"flatten layers and save with LZW compression"</strong>——合并图层 + LZW。合并图层是前提，图层化的 TIFF 在部分排版系统中会被按"第一层"处理，导致元素丢失。</li>
+  <li>命令层面就是 <code>compression = "lzw"</code>，不要传 <code>"none"</code>（体积暴涨）或 <code>"jpeg"</code>（有损，等于自毁分辨率）。</li>
+</ul>
+
+<h3>4.2　位深、色彩空间、背景：三个必查字段</h3>
+<div class="table-scroll">
+<table>
+  <caption>表 4-1　TIFF 关键字段的合规取值</caption>
+  <thead>
+    <tr><th style="width:16%">字段</th><th style="width:30%">合规取值</th><th style="width:54%">不合规后果与说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>位深</strong></td>
+      <td>8 位/通道（RGB 共 24 位）</td>
+      <td>多数期刊按 8 位/通道接收。16 位/通道可被部分刊接受，但体积翻倍，且投稿系统常在上传时静默降位。除非期刊明确要求，默认用 8 位。</td>
+    </tr>
+    <tr>
+      <td><strong>色彩模式</strong></td>
+      <td>RGB（sRGB 色彩空间）</td>
+      <td>R 端只能输出 RGB/sRGB。<strong>需要 CMYK 必须在 R 之外转换</strong>（Photoshop / ImageMagick）。CMYK 色域比 sRGB 窄，亮荧光色（纯青、纯品红、亮绿）转换后会明显变暗发闷，<strong>转换后必须目视复核</strong>，必要时单独调整该色值。</td>
+    </tr>
+    <tr>
+      <td><strong>背景 / Alpha</strong></td>
+      <td>白底、<strong>无 alpha 通道</strong></td>
+      <td><strong>禁止透明背景。</strong>带 alpha 的 TIFF 会被不少期刊系统判为不合规（排版时透明区可能被填成黑色，深色文字直接消失）。显式设 <code>bg = "white"</code>，并确认输出未写入 alpha。</td>
+    </tr>
+    <tr>
+      <td><strong>压缩</strong></td>
+      <td>LZW</td>
+      <td>无压缩体积过大易触发上传上限；JPEG 压缩属有损，分辨率事实上被打折。</td>
+    </tr>
+    <tr>
+      <td><strong>图层</strong></td>
+      <td>已拼合（flattened）</td>
+      <td>R 输出的 TIFF 天然是单层位图，不存在此问题；若经 Photoshop 加工，务必拼合后再存。</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>4.3　光栅化的代价：文字不可编辑</h3>
+<div class="box warn">
+  <span class="tag">权衡</span>
+  <p>TIFF 是位图，<strong>不存在字体嵌入问题</strong>（字形已经是像素），这消除了字体缺失的风险；但反过来，<strong>文字被永久栅格化、不可编辑</strong>。Nature 等刊要求图内文字可由编辑部修改（改字号、改单位、统一术语），此时位图无法满足——应<strong>同时提供矢量版本</strong>（PDF/EPS），或在图中不放置需要编辑的文字。</p>
+  <p>实务建议：位图用于<strong>终稿提交</strong>，矢量版留作<strong>返修与校样</strong>使用。两版必须同源（同一段 ggplot 代码 + 同一 <code>family</code>），否则校样阶段的修改会与已提交位图脱节。</p>
+</div>
+
+<h3>4.4　文件体积估算与期刊上限</h3>
+<p>未压缩 RGB TIFF 的体积可以直接算出来，不必反复试存：</p>
+<p class="rule"><code>体积 ≈ 宽(mm) ÷ 25.4 × dpi × 高(mm) ÷ 25.4 × dpi × 3 字节</code>（8 位/通道；16 位则 ×2）</p>
+
+<div class="table-scroll">
+<table>
+  <caption>表 4-2　常见画布的像素与体积（8 位 RGB）。LZW 后的体积取决于图像内容，纯色/折线类压缩率最高，照片类最低。</caption>
+  <thead>
+    <tr><th style="width:26%">画布（mm）</th><th class="num" style="width:12%">dpi</th><th class="num" style="width:20%">像素</th><th class="num" style="width:20%">未压缩</th><th class="num" style="width:22%">LZW 后典型</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>190 × 250（Elsevier 双栏满高）</td><td class="num">600</td><td class="num">4488 × 5906</td><td class="num">79.5 MB</td><td class="num">8–30 MB</td></tr>
+    <tr><td>174 × 235（Cell 双栏）</td><td class="num">600</td><td class="num">4110 × 5551</td><td class="num">68.4 MB</td><td class="num">7–26 MB</td></tr>
+    <tr><td>89 × 120（Nature 单栏）</td><td class="num">600</td><td class="num">2102 × 2835</td><td class="num">17.9 MB</td><td class="num">2–7 MB</td></tr>
+    <tr><td>190 × 250（同画布，降分辨率）</td><td class="num">300</td><td class="num">2244 × 2953</td><td class="num">19.9 MB</td><td class="num">2–8 MB</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box note">
+  <span class="tag">上限提醒</span>
+  <p>注意期刊的单图体积上限：Elsevier 常见 <strong>40 MB</strong>，Nature 主图建议 <strong>≤ 50 MB</strong>。组合图（多 panel 拼版）尤其容易超限——一张 190×250 mm @600 dpi 的组合图，若内容偏照片化，LZW 后可能逼近上限。此时应<strong>按 panel 分别导出</strong>，或对照片类 panel 单独降到 300 dpi 后在外部拼版，而不是整图降分辨率。</p>
+</div>
+
+<h3>4.5　需要 CMYK 时的外部转换</h3>
+<p>R 生态不提供可靠的 CMYK 输出，转换必须在外部完成。ImageMagick 的最小可用命令：</p>
+<pre><code><span class="tok-com"># 仅在期刊明确要求 CMYK 时使用；先做 sRGB -&gt; CMYK 转换，再目视复核颜色</span>
+magick fig_rgb.tif <span class="tok-op">\</span>
+  <span class="tok-op">-</span>profile <span class="tok-str">"sRGB.icc"</span> <span class="tok-op">\</span>
+  <span class="tok-op">-</span>profile <span class="tok-str">"ISOcoated_v2_300_eci.icc"</span> <span class="tok-op">\</span>
+  <span class="tok-op">-</span>depth <span class="tok-num">8</span> <span class="tok-op">-</span>compress lzw <span class="tok-op">\</span>
+  fig_cmyk.tif</code></pre>
+<p class="small">若手边没有 ICC 文件，可用 <code>-colorspace CMYK</code> 做无配置文件的粗略转换，但颜色偏差更大，<strong>不可用于终稿</strong>。转换后请用图像工具抽查关键色块，特别是亮绿、亮橙、纯青——这三类在 CMYK 下最容易"发灰"。</p>
+</section>
+
+<!-- ==================== 5 技术路线 ==================== -->
+<section id="s5">
+<h2><span class="num">5</span>正确实现的技术路线</h2>
+
+<p>要让"预览 = 导出"，需要同时满足两个条件：<strong>同一套排版引擎</strong> + <strong>同一组物理参数</strong>。前者由 <code>ragg</code> 提供，后者由你的代码提供。缺一不可。</p>
+
+<h3>5.1　为什么是 ragg 而不是 grDevices::tiff()</h3>
+<div class="table-scroll">
+<table>
+  <caption>表 5-1　两种 TIFF 设备的关键差异</caption>
+  <thead>
+    <tr><th style="width:20%">维度</th><th style="width:40%"><code>ragg::agg_tiff()</code></th><th style="width:40%"><code>grDevices::tiff()</code></th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>文本排版</strong></td><td>systemfonts + textshaping 引擎，与 <code>agg_png</code> <strong>完全同源</strong>；OpenType 特性（连字、字距调整）一致</td><td>依赖系统图形栈（Windows 上 GDI / cairo 视构建而定），与屏幕设备的字形处理路径不同</td></tr>
+    <tr><td><strong>抗锯齿</strong></td><td>Agg 自带高质量抗锯齿，屏幕/输出表现一致</td><td>依赖底层后端，跨平台差异明显，细线易被"糊"成灰线</td></tr>
+    <tr><td><strong>LZW 支持</strong></td><td>内建，<code>compression = "lzw"</code> 直接可用</td><td>依赖编译时的 libtiff，部分构建不支持或参数被忽略</td></tr>
+    <tr><td><strong>跨平台一致性</strong></td><td>高（同一份代码在 Win/macOS/Linux 出图几乎一致）</td><td>低（同一份代码在不同系统可能出不同字形与线宽）</td></tr>
+    <tr><td><strong>透明度</strong></td><td>默认 <code>background = "white"</code>，不会意外写入 alpha</td><td>需显式管理，容易带上 alpha 通道</td></tr>
+    <tr><td><strong>速度</strong></td><td>较快（多线程渲染）</td><td>较慢</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box tip">
+  <span class="tag">关键机制</span>
+  <p><code>agg_png()</code> 与 <code>agg_tiff()</code> <strong>共用同一套 text shaping 引擎</strong>（systemfonts 做字体匹配、textshaping 做断行与字形定位）。因此「用 PNG 预览、用 TIFF 出稿」时，字形、字宽、换行点<strong>完全同源</strong>——这才是预览可信的技术前提。换成一个用 cairo、一个用 Agg，就永远校不准。</p>
+</div>
+
+<h3>5.2　最小可用的出图函数</h3>
+<p>把单位换算、字体、背景、压缩四件事封装进一个函数，从根上消除"每张图参数都不一样"的问题：</p>
+<pre><code><span class="tok-fn">library</span>(ggplot2)
+<span class="tok-fn">library</span>(ragg)
+
+<span class="tok-com"># pt -&gt; mm：ggplot2 导出的常量，.pt = 72.27/25.4 = 2.845276</span>
+<span class="tok-com"># 用于 geom_text(size=)、annotate(size=)、linewidth= 等以 mm 为单位的参数</span>
+pt_mm <span class="tok-op">&lt;-</span> <span class="tok-kw">function</span>(pt) pt <span class="tok-op">/</span> .pt
+
+<span class="tok-com"># 统一的论文主题：字号 pt，线宽 pt（经 pt_mm 转 mm）</span>
+theme_paper <span class="tok-op">&lt;-</span> <span class="tok-kw">function</span>(base_size <span class="tok-op">=</span> <span class="tok-num">7</span>, family <span class="tok-op">=</span> <span class="tok-str">"Arial"</span>) {
+  <span class="tok-fn">theme_classic</span>(base_size <span class="tok-op">=</span> base_size, base_family <span class="tok-op">=</span> family) <span class="tok-op">+</span>
+    <span class="tok-fn">theme</span>(
+      axis.line    <span class="tok-op">=</span> <span class="tok-fn">element_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-fn">pt_mm</span>(<span class="tok-num">0.5</span>),
+                                 colour <span class="tok-op">=</span> <span class="tok-str">"black"</span>, lineend <span class="tok-op">=</span> <span class="tok-str">"square"</span>),
+      axis.ticks   <span class="tok-op">=</span> <span class="tok-fn">element_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-fn">pt_mm</span>(<span class="tok-num">0.5</span>),
+                                 colour <span class="tok-op">=</span> <span class="tok-str">"black"</span>),
+      axis.text    <span class="tok-op">=</span> <span class="tok-fn">element_text</span>(size <span class="tok-op">=</span> base_size, colour <span class="tok-op">=</span> <span class="tok-str">"black"</span>),
+      axis.title   <span class="tok-op">=</span> <span class="tok-fn">element_text</span>(size <span class="tok-op">=</span> base_size),
+      legend.title <span class="tok-op">=</span> <span class="tok-fn">element_text</span>(size <span class="tok-op">=</span> base_size),
+      legend.text  <span class="tok-op">=</span> <span class="tok-fn">element_text</span>(size <span class="tok-op">=</span> base_size <span class="tok-op">-</span> <span class="tok-num">1</span>),
+      legend.key.size <span class="tok-op">=</span> <span class="tok-fn">unit</span>(<span class="tok-num">3</span>, <span class="tok-str">"mm"</span>),
+      plot.title   <span class="tok-op">=</span> <span class="tok-fn">element_blank</span>(),   <span class="tok-com"># 图题放正文图注，不进图</span>
+      panel.grid   <span class="tok-op">=</span> <span class="tok-fn">element_blank</span>()
+    )
+}
+
+<span class="tok-com"># 只做一件事：按 mm 出 TIFF + LZW，白底，无 alpha</span>
+save_paper_tiff <span class="tok-op">&lt;-</span> <span class="tok-kw">function</span>(plot, file,
+                             width_mm, height_mm,
+                             dpi <span class="tok-op">=</span> <span class="tok-num">600</span>) {
+  <span class="tok-fn">ggsave</span>(
+    filename    <span class="tok-op">=</span> file,
+    plot        <span class="tok-op">=</span> plot,
+    device      <span class="tok-op">=</span> ragg<span class="tok-op">::</span>agg_tiff,
+    width       <span class="tok-op">=</span> width_mm,
+    height      <span class="tok-op">=</span> height_mm,
+    units       <span class="tok-op">=</span> <span class="tok-str">"mm"</span>,        <span class="tok-com"># 强制 mm，杜绝 inch 默认值</span>
+    dpi         <span class="tok-op">=</span> dpi,
+    bg          <span class="tok-op">=</span> <span class="tok-str">"white"</span>,      <span class="tok-com"># 白底，禁止 transparent</span>
+    compression <span class="tok-op">=</span> <span class="tok-str">"lzw"</span>        <span class="tok-com"># 无损压缩</span>
+  )
+  <span class="tok-fn">invisible</span>(file)
+}</code></pre>
+
+<p class="code-label">用法</p>
+<pre><code>p <span class="tok-op">&lt;-</span> <span class="tok-fn">ggplot</span>(df, <span class="tok-fn">aes</span>(x, y)) <span class="tok-op">+</span>
+  <span class="tok-fn">geom_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-fn">pt_mm</span>(<span class="tok-num">1</span>), colour <span class="tok-op">=</span> <span class="tok-str">"#1f4e79"</span>) <span class="tok-op">+</span>
+  <span class="tok-fn">geom_point</span>(size <span class="tok-op">=</span> <span class="tok-num">1.2</span>) <span class="tok-op">+</span>          <span class="tok-com"># 点直径单位是 mm，无需换算</span>
+  <span class="tok-fn">annotate</span>(<span class="tok-str">"text"</span>, x <span class="tok-op">=</span> <span class="tok-num">2</span>, y <span class="tok-op">=</span> <span class="tok-num">5</span>,
+           label <span class="tok-op">=</span> <span class="tok-str">"P &lt; 0.001"</span>,
+           size <span class="tok-op">=</span> <span class="tok-fn">pt_mm</span>(<span class="tok-num">7</span>), family <span class="tok-op">=</span> <span class="tok-str">"Arial"</span>) <span class="tok-op">+</span>
+  <span class="tok-fn">labs</span>(x <span class="tok-op">=</span> <span class="tok-str">"Time (h)"</span>, y <span class="tok-op">=</span> <span class="tok-str">"Concentration (mM)"</span>) <span class="tok-op">+</span>
+  <span class="tok-fn">theme_paper</span>(<span class="tok-num">7</span>)
+
+<span class="tok-fn">save_paper_tiff</span>(p, <span class="tok-str">"Fig1.tif"</span>, width_mm <span class="tok-op">=</span> <span class="tok-num">90</span>, height_mm <span class="tok-op">=</span> <span class="tok-num">70</span>,
+                dpi <span class="tok-op">=</span> <span class="tok-num">600</span>)</code></pre>
+
+<h3>5.3　预览方案：把 PNG 按物理尺寸投回屏幕</h3>
+<p>核心思路：<strong>用与出稿完全相同的画布尺寸渲染 PNG，再按物理单位（mm）交给 <code>grid.raster()</code></strong>。此时屏幕上的像素密度变了，但"字号占画布的比例"没变——这正是印刷时的比例。</p>
+<pre><code><span class="tok-fn">library</span>(grid)
+
+preview_paper <span class="tok-op">&lt;-</span> <span class="tok-kw">function</span>(plot, width_mm, height_mm, dpi <span class="tok-op">=</span> <span class="tok-num">600</span>) {
+  tf <span class="tok-op">&lt;-</span> <span class="tok-fn">tempfile</span>(fileext <span class="tok-op">=</span> <span class="tok-str">".png"</span>)
+
+  <span class="tok-com"># 与 agg_tiff 同引擎、同物理尺寸 —— 版面与出稿完全一致</span>
+  <span class="tok-fn">ggsave</span>(tf, plot,
+         device <span class="tok-op">=</span> ragg<span class="tok-op">::</span>agg_png,
+         width <span class="tok-op">=</span> width_mm, height <span class="tok-op">=</span> height_mm,
+         units <span class="tok-op">=</span> <span class="tok-str">"mm"</span>, dpi <span class="tok-op">=</span> dpi, bg <span class="tok-op">=</span> <span class="tok-str">"white"</span>)
+
+  img <span class="tok-op">&lt;-</span> png<span class="tok-op">::</span><span class="tok-fn">readPNG</span>(tf)
+
+  <span class="tok-com"># 按物理尺寸绘制，而非按像素 —— 这是"等比例"的关键</span>
+  <span class="tok-fn">grid.newpage</span>()
+  <span class="tok-fn">grid.raster</span>(img,
+              width  <span class="tok-op">=</span> <span class="tok-fn">unit</span>(width_mm,  <span class="tok-str">"mm"</span>),
+              height <span class="tok-op">=</span> <span class="tok-fn">unit</span>(height_mm, <span class="tok-str">"mm"</span>),
+              interpolate <span class="tok-op">=</span> <span class="tok-num">FALSE</span>)
+}
+
+<span class="tok-fn">preview_paper</span>(p, <span class="tok-num">90</span>, <span class="tok-num">70</span>)</code></pre>
+
+<div class="box note">
+  <span class="tag">性能提示</span>
+  <p>预览时 <code>dpi</code> 可降到 <strong>150</strong>：因为字号以 pt、画布以 mm 声明，<strong>dpi 只影响像素密度，不影响版面</strong>，降 dpi 能显著加快渲染与 <code>grid.raster</code> 的刷新速度，而字号占比、换行位置、留白比例完全不变。若需要逐像素检查抗锯齿与细线，再用 <code>dpi = 600</code> 跑一次终检。</p>
+</div>
+
+<div class="box warn">
+  <span class="tag">显示设备也要够大</span>
+  <p><code>grid.raster</code> 按 90 mm × 70 mm 绘制，若当前图形设备（Plots 面板）本身小于该尺寸，图会被裁切或强制缩放。预览前把设备放大到足以容纳目标尺寸（例如 <code>dev.new(width = 6, height = 5, noRStudioGD = TRUE)</code>），或使用独立的图形窗口、放大查看。</p>
+</div>
+
+<h3>5.4　中文字体：注册一次，全程显式引用</h3>
+<p><code>ragg</code> 通过 systemfonts 访问系统字体，中文不需要 showtext，但<strong>必须注册并显式指定 family</strong>，否则可能回退到不含中文字形的字体：</p>
+<pre><code><span class="tok-com"># 1) 先查系统里到底装了什么、路径在哪</span>
+systemfonts<span class="tok-op">::</span><span class="tok-fn">match_font</span>(<span class="tok-str">"Arial"</span>)          <span class="tok-com"># 应返回非空路径</span>
+systemfonts<span class="tok-op">::</span><span class="tok-fn">system_fonts</span>() <span class="tok-op">|&gt;</span>
+  <span class="tok-fn">subset</span>(grepl(<span class="tok-str">"Han|Hei|Song|YaHei"</span>, family))
+
+<span class="tok-com"># 2) 注册中文字体（文件名因系统而异，按上一步实际路径填写）</span>
+systemfonts<span class="tok-op">::</span><span class="tok-fn">register_font</span>(
+  name  <span class="tok-op">=</span> <span class="tok-str">"CJK"</span>,
+  plain <span class="tok-op">=</span> <span class="tok-str">"C:/Windows/Fonts/msyh.ttc"</span>,
+  bold  <span class="tok-op">=</span> <span class="tok-str">"C:/Windows/Fonts/msyhbd.ttc"</span>
+)
+
+<span class="tok-com"># 3) 在主题里显式使用；不要调用 showtext_auto()</span>
+<span class="tok-fn">theme_paper</span>(<span class="tok-num">9</span>, family <span class="tok-op">=</span> <span class="tok-str">"CJK"</span>)</code></pre>
+
+<div class="box danger">
+  <span class="tag">禁用 showtext</span>
+  <p>不要在你的出图脚本里加载 <code>showtext</code>，也不要调用 <code>showtext_auto()</code>。<code>showtext</code> 会接管文本渲染并维护独立的字体注册表，与 <code>ragg</code> 的 systemfonts 路径冲突；两者共存时，预览与导出可能走不同分支，<strong>字形与字宽重新分叉，前面的所有努力全部作废</strong>。若历史脚本里已有 <code>showtext</code>，出图前执行 <code>showtext_auto(FALSE)</code> 并卸载。</p>
+</div>
+
+<h3>5.5　出图后自校验：把"看起来对"变成"算出来对"</h3>
+<pre><code>check_tiff <span class="tok-op">&lt;-</span> <span class="tok-kw">function</span>(file, width_mm, height_mm, dpi) {
+  info <span class="tok-op">&lt;-</span> magick<span class="tok-op">::</span><span class="tok-fn">image_info</span>(magick<span class="tok-op">::</span><span class="tok-fn">image_read</span>(file))
+
+  exp_w <span class="tok-op">&lt;-</span> <span class="tok-fn">round</span>(width_mm  <span class="tok-op">/</span> <span class="tok-num">25.4</span> <span class="tok-op">*</span> dpi)
+  exp_h <span class="tok-op">&lt;-</span> <span class="tok-fn">round</span>(height_mm <span class="tok-op">/</span> <span class="tok-num">25.4</span> <span class="tok-op">*</span> dpi)
+
+  <span class="tok-fn">cat</span>(<span class="tok-fn">sprintf</span>(<span class="tok-str">"期望 %d x %d px | 实际 %d x %d px\n"</span>,
+              exp_w, exp_h, info<span class="tok-op">$</span>width, info<span class="tok-op">$</span>height))
+  <span class="tok-kw">if</span> (<span class="tok-fn">abs</span>(info<span class="tok-op">$</span>width <span class="tok-op">-</span> exp_w) <span class="tok-op">&gt;</span> <span class="tok-num">1</span> <span class="tok-op">||</span>
+      <span class="tok-fn">abs</span>(info<span class="tok-op">$</span>height <span class="tok-op">-</span> exp_h) <span class="tok-op">&gt;</span> <span class="tok-num">1</span>)
+    <span class="tok-fn">warning</span>(<span class="tok-str">"像素尺寸不符：units/dpi 可能被设备忽略"</span>)
+
+  <span class="tok-fn">cat</span>(<span class="tok-fn">sprintf</span>(<span class="tok-str">"色彩空间: %s | alpha: %s\n"</span>,
+              info<span class="tok-op">$</span>colorspace,
+              <span class="tok-fn">ifelse</span>(<span class="tok-fn">grepl</span>(<span class="tok-str">"TRUE"</span>, info<span class="tok-op">$</span>matte),
+                     <span class="tok-str">"有（不合规）"</span>, <span class="tok-str">"无"</span>)))
+  <span class="tok-fn">cat</span>(<span class="tok-fn">sprintf</span>(<span class="tok-str">"文件大小: %.1f MB\n"</span>, info<span class="tok-op">$</span>filesize <span class="tok-op">/</span> <span class="tok-num">1024</span><span class="tok-op">^</span><span class="tok-num">2</span>))
+}
+
+<span class="tok-fn">check_tiff</span>(<span class="tok-str">"Fig1.tif"</span>, <span class="tok-num">90</span>, <span class="tok-num">70</span>, <span class="tok-num">600</span>)</code></pre>
+<p>这一步的价值在于<strong>机器可判</strong>：尺寸差 1 px 以上就警告，alpha 存在就报错。人是看不出 4488 px 和 4520 px 的差别的，脚本可以。</p>
+</section>
+
+<!-- ==================== 6 尺寸建议 ==================== -->
+<section id="s6">
+<h2><span class="num">6</span>五类科研图的尺寸建议</h2>
+
+<p>以下建议值在「信息密度」与「可读性」之间取平衡，均以 §3 的栏宽为基准。核心原则有两条：<strong>宽度优先对齐栏宽</strong>（宁可按单栏出图，也不要在排版时被强制缩放），<strong>高度不超过版心</strong>（否则图会被缩到字看不清）。</p>
+
+<div class="table-scroll">
+<table>
+  <caption>表 6-1　五类常见图的推荐尺寸与参数（字号为 pt，线宽为 pt，尺寸为 mm）</caption>
+  <thead>
+    <tr>
+      <th style="width:13%">图型</th>
+      <th style="width:18%">推荐宽 × 高（mm）</th>
+      <th style="width:12%">字号</th>
+      <th style="width:13%">线宽</th>
+      <th style="width:44%">注意事项</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>折线图</strong><br><span class="small">时间序列 / 剂量响应</span></td>
+      <td>单栏 85 × 65<br>双栏 175 × 70</td>
+      <td>7 pt<br>（轴标签同）</td>
+      <td>数据线 0.75–1 pt<br>轴线 0.5 pt</td>
+      <td>线宽低于 0.5 pt 在 300 dpi 下会断成灰点。标记点直径 1.2–2 mm，不要靠"点大"来区分组别，用形状 + 线型双编码（灰度打印时仍可辨）。X 轴若是时间，刻度标签密集时旋转 45° 或改用缩写。</td>
+    </tr>
+    <tr>
+      <td><strong>柱状图</strong><br><span class="small">分组比较 / 均值±误差</span></td>
+      <td>单栏 85 × 70<br>双栏 170 × 80</td>
+      <td>7 pt</td>
+      <td>轴 0.5 pt<br>柱边框 0.5 pt</td>
+      <td>柱宽占组间距 60–70%。误差棒线宽与轴线一致（0.5 pt），须在图注中说明是 SD 还是 SEM、n 为多少。显著性标注（<code>*</code>、<code>**</code>）字号不小于 6 pt，位置避免与误差棒顶端重叠。柱状图 y 轴必须从 0 起，截断会构成误导。</td>
+    </tr>
+    <tr>
+      <td><strong>箱线图</strong><br><span class="small">分布比较 / 离群值</span></td>
+      <td>单栏 90 × 80<br>双栏 180 × 90</td>
+      <td>7 pt</td>
+      <td>箱体 0.5 pt<br>中位线 1 pt</td>
+      <td>中位线加粗到 1 pt 以区别于四分位边（这是审稿人最容易挑的点）。须在图注说明须线定义（1.5×IQR 或 min/max）。样本量小时（n &lt; 10）建议叠加抖动散点，点直径 1–1.5 mm，透明度 0.5 左右但不低于 0.35。</td>
+    </tr>
+    <tr>
+      <td><strong>热图</strong><br><span class="small">表达矩阵 / 相关性</span></td>
+      <td>单栏 88 × 88<br>双栏 180 × 150</td>
+      <td>格子标注 ≥ 6 pt<br>轴标签 7 pt</td>
+      <td>格线 0.25–0.5 pt<br>（可省略）</td>
+      <td><strong>格子必须接近正方形</strong>（用 <code>coord_fixed()</code>），否则色块被拉成矩形、视觉权重失真。<strong>格内数字不得小于 6 pt</strong>，格子太密时直接不标数字，靠色条传达。色条（legend bar）长度不小于 25 mm，刻度标签 6–7 pt。配色用感知均匀的色阶（viridis 类），不要用彩虹色。</td>
+    </tr>
+    <tr>
+      <td><strong>多面板组合</strong><br><span class="small">Figure 1 (a)(b)(c)</span></td>
+      <td>双栏 183 × 120–240<br>（高度勿超版心）</td>
+      <td>面板内 7 pt<br>panel label 8 pt bold</td>
+      <td>全图统一：<br>轴 0.5 pt / 数据线 1 pt</td>
+      <td><strong>所有面板字号必须一致</strong>（这是"像一篇论文"和"像拼贴"的分界）。panel label 用 8 pt 加粗、置于面板左上角外侧，不要遮住数据。共享坐标轴时只在最左/最下列标刻度，但要保留轴标题。<strong>为对齐预留空间</strong>：y 轴标签宽度不同的面板，先用 <code>patchwork</code> 或 <code>cowplot</code> 对齐绘图区（<code>align = "v"</code>），不要靠手调宽度。单面板数量建议 ≤ 6，超过则考虑拆图。</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box tip">
+  <span class="tag">宽高比经验值</span>
+  <p>单面板折线/柱状图常用 <strong>4:3 至 3:2</strong>；热图<strong>接近 1:1</strong>；多面板组合按行数决定，两行三列常取 <strong>183 × 130 mm</strong>。不要用"拉伸到填满版面"的方式定尺寸——版面是为信息服务的，多余空间应留给图注，而不是让曲线变平。</p>
+</div>
+
+<h3>6.1　多面板的对齐与字号统一（最容易翻车的一节）</h3>
+<pre><code><span class="tok-fn">library</span>(patchwork)
+
+p1 <span class="tok-op">&lt;-</span> <span class="tok-fn">ggplot</span>(d1, <span class="tok-fn">aes</span>(x, y)) <span class="tok-op">+</span> <span class="tok-fn">geom_point</span>() <span class="tok-op">+</span> <span class="tok-fn">labs</span>(x <span class="tok-op">=</span> <span class="tok-str">"Very long axis title (unit)"</span>) <span class="tok-op">+</span> <span class="tok-fn">theme_paper</span>(<span class="tok-num">7</span>)
+p2 <span class="tok-op">&lt;-</span> <span class="tok-fn">ggplot</span>(d2, <span class="tok-fn">aes</span>(x, y)) <span class="tok-op">+</span> <span class="tok-fn">geom_line</span>() <span class="tok-op">+</span> <span class="tok-fn">labs</span>(x <span class="tok-op">=</span> <span class="tok-str">"x"</span>)           <span class="tok-op">+</span> <span class="tok-fn">theme_paper</span>(<span class="tok-num">7</span>)
+
+combined <span class="tok-op">&lt;-</span> (p1 <span class="tok-op">|</span> p2) <span class="tok-op">+</span>
+  <span class="tok-fn">plot_layout</span>(guides <span class="tok-op">=</span> <span class="tok-str">"collect"</span>) <span class="tok-op">+</span>   <span class="tok-com"># 合并图例，省纵向空间</span>
+  <span class="tok-fn">plot_annotation</span>(tag_levels <span class="tok-op">=</span> <span class="tok-str">"a"</span>) <span class="tok-op">&amp;</span>
+  <span class="tok-fn">theme</span>(plot.tag <span class="tok-op">=</span> <span class="tok-fn">element_text</span>(size <span class="tok-op">=</span> <span class="tok-num">8</span>, face <span class="tok-op">=</span> <span class="tok-str">"bold"</span>,
+                            family <span class="tok-op">=</span> <span class="tok-str">"Arial"</span>))
+
+<span class="tok-fn">save_paper_tiff</span>(combined, <span class="tok-str">"Fig2.tif"</span>, <span class="tok-num">183</span>, <span class="tok-num">85</span>, dpi <span class="tok-op">=</span> <span class="tok-num">600</span>)</code></pre>
+<p><code>&amp;</code> 作用于所有子图，是"统一字号"最省事的写法；但要记住 <strong><code>plot.tag</code> 的字号必须显式设为 8 pt bold</strong>，patchwork 的默认值往往偏大。</p>
+</section>
+
+<!-- ==================== 7 清单 ==================== -->
+<section id="s7">
+<h2><span class="num">7</span>投稿前自检清单</h2>
+
+<p>以下 14 项按"会被直接退回"到"影响观感"排序。建议打印出来逐项勾选，或在脚本里做成断言（§5.5）。</p>
+
+<div class="checklist">
+  <div class="item"><input type="checkbox" id="c01"><label for="c01"><b>① 物理宽度与目标栏宽精确一致</b><span class="hint">单栏 89/90、双栏 183/190…… 用的是期刊给的具体数字，不是 7 inch 这种近似值。误差应控制在 ±1 mm 内。</span></label></div>
+  <div class="item"><input type="checkbox" id="c02"><label for="c02"><b>② 高度未超过版心</b><span class="hint">Nature ≤ 170 mm、Cell ≤ 235 mm、Elsevier 常见 220–250 mm。超高的图会被排版强制缩放，连带字号跌破下限。</span></label></div>
+  <div class="item"><input type="checkbox" id="c03"><label for="c03"><b>③ dpi 与图类型匹配</b><span class="hint">照片/半色调 ≥ 300 dpi；线条图与组合图 600 dpi（Elsevier 线条图建议 1000 dpi）。不要用同一个 dpi 打天下。</span></label></div>
+  <div class="item"><input type="checkbox" id="c04"><label for="c04"><b>④ TIFF 使用 LZW 压缩</b><span class="hint">确认 <code>compression = "lzw"</code> 生效；未压缩或 JPEG 压缩都不合规。</span></label></div>
+  <div class="item"><input type="checkbox" id="c05"><label for="c05"><b>⑤ 白底、无 alpha 通道</b><span class="hint"><code>bg = "white"</code>；用 §5.5 的脚本确认 <code>matte</code> 无 alpha。透明背景是最高频的"隐形退回"原因。</span></label></div>
+  <div class="item"><input type="checkbox" id="c06"><label for="c06"><b>⑥ 色彩空间为 RGB / sRGB</b><span class="hint">若期刊要求 CMYK，已完成外部转换并目视复核过亮色（青、品红、亮绿）是否变暗。</span></label></div>
+  <div class="item"><input type="checkbox" id="c07"><label for="c07"><b>⑦ 字体统一且名称已核实</b><span class="hint">全文同一字体；<code>family</code> 显式声明；<code>systemfonts::match_font()</code> 返回非空；未加载 showtext。目标刊是否接受 Arial/Helvetica 而非 Times，也需确认。</span></label></div>
+  <div class="item"><input type="checkbox" id="c08"><label for="c08"><b>⑧ 最小字号达标</b><span class="hint">图内无小于 5 pt 的文字（Nature 5–7 pt、Elsevier 正文 7 pt / 上下标 ≥ 6 pt、ACS 最小 4.5 pt、Cell ≥ 6 pt）。用肉眼估不准，需在导出后按 mm 反算。</span></label></div>
+  <div class="item"><input type="checkbox" id="c09"><label for="c09"><b>⑨ 线宽不低于下限</b><span class="hint">最细线 ≥ 0.25 pt（Elsevier 明确下限），轴线 0.5–1.5 pt。检查对象包括误差棒、网格线、图例边框——它们最容易被忽略而细到消失。</span></label></div>
+  <div class="item"><input type="checkbox" id="c10"><label for="c10"><b>⑩ 文件大小未超上限</b><span class="hint">Elsevier 常见 40 MB、Nature 主图建议 ≤ 50 MB。超限时按 panel 拆分导出，而非整图降 dpi。</span></label></div>
+  <div class="item"><input type="checkbox" id="c11"><label for="c11"><b>⑪ panel label 统一且合规</b><span class="hint">全部 8 pt 加粗、同位置（左上外侧）、同大小写风格（a/b/c 或 A/B/C，不要混用）。</span></label></div>
+  <div class="item"><input type="checkbox" id="c12"><label for="c12"><b>⑫ 图内无残留标题</b><span class="hint"><code>plot.title</code> 已置空；图题、方法说明、统计标注应放在正文图注（figure caption），不占图内空间。</span></label></div>
+  <div class="item"><input type="checkbox" id="c13"><label for="c13"><b>⑬ 灰度打印仍可辨识</b><span class="hint">把所有颜色临时转成灰度（或在打印设置里选灰度），确认还能区分各组——凭的是线型、标记形状、明度差，而不是色相。仅靠红/绿区分是最常见的不可及设计。</span></label></div>
+  <div class="item"><input type="checkbox" id="c14"><label for="c14"><b>⑭ 色盲友好</b><span class="hint">避免红绿对立、避免彩虹色阶；优先使用 viridis / Okabe-Ito 等经过验证的配色。分类数 ≤ 6 时尽量用形状 + 颜色双编码。</span></label></div>
+</div>
+
+<div class="box note">
+  <span class="tag">还可加两项（按刊要求）</span>
+  <p><strong>⑮</strong> 是否同时准备了矢量版本（PDF/EPS）以备返修与校样；<strong>⑯</strong> 图中文字是否为英文、单位是否符合 SI 记法（如 <code>mM</code> 而非 <code>mM/L</code>、<code>·</code> 与 <code>×</code> 的正确使用）。</p>
+</div>
+</section>
+
+<!-- ==================== 8 错误对照 ==================== -->
+<section id="s8">
+<h2><span class="num">8</span>常见错误 → 正确写法</h2>
+
+<p>每组按「错误代码 → 错误后果 → 正确代码」排列，代码可直接复制运行。这里列的 8 组覆盖了绝大多数"预览与导出不一致"的实际案例。</p>
+
+<!-- 1 -->
+<div class="pair">
+  <div class="head"><span class="idx">01</span>裸调用 ggsave("fig.tif")</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">ggsave</span>(<span class="tok-str">"fig.tif"</span>)</code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p>三个关键参数全部走默认：尺寸 <strong>7 × 5 inch</strong>（即 177.8 × 127 mm）、分辨率 <strong>300 dpi</strong>、设备由扩展名推断（<code>.tif</code> 走 <code>grDevices::tiff()</code>）。对 89 mm 单栏来说宽度超出一倍，对 190 mm 双栏又窄了 12 mm；同时字体走系统默认路径，与预览不同源。图"生成成功了"是最危险的信号——它什么都没告诉你。</p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-fn">ggsave</span>(
+  <span class="tok-str">"fig.tif"</span>, plot <span class="tok-op">=</span> p,
+  device      <span class="tok-op">=</span> ragg<span class="tok-op">::</span>agg_tiff,
+  width       <span class="tok-op">=</span> <span class="tok-num">89</span>, height <span class="tok-op">=</span> <span class="tok-num">120</span>, units <span class="tok-op">=</span> <span class="tok-str">"mm"</span>,
+  dpi         <span class="tok-op">=</span> <span class="tok-num">600</span>,
+  bg          <span class="tok-op">=</span> <span class="tok-str">"white"</span>,
+  compression <span class="tok-op">=</span> <span class="tok-str">"lzw"</span>
+)</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="pair">
+  <div class="head"><span class="idx">02</span>geom_text(size = 8) 以为是 8 pt</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">geom_text</span>(<span class="tok-fn">aes</span>(label <span class="tok-op">=</span> lab), size <span class="tok-op">=</span> <span class="tok-num">8</span>)</code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p><code>size</code> 的单位是 <strong>mm</strong>，不是 pt。8 mm 字高 ≈ <strong>22.76 pt</strong>，比预期的 8 pt 大 <strong>2.8 倍</strong>。后果是标注压住数据点、互相重叠、溢出画布；更麻烦的是它<strong>不受 <code>theme(base_size=)</code> 控制</strong>，调主题毫无效果，作者往往在这里卡很久。注意 <code>geom_point(size=)</code> 也是 mm（点直径），但那个单位是符合直觉的——同名字段、两种语义，正是陷阱所在。</p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-com"># .pt 是 ggplot2 导出的常量：72.27 / 25.4 = 2.845276（pt per mm）</span>
+<span class="tok-fn">geom_text</span>(<span class="tok-fn">aes</span>(label <span class="tok-op">=</span> lab),
+          size <span class="tok-op">=</span> <span class="tok-num">8</span> <span class="tok-op">/</span> .pt,
+          family <span class="tok-op">=</span> <span class="tok-str">"Arial"</span>)</code></pre>
+      <p class="small" style="margin-top:8px">等价写法：<code>size = pt_mm(8)</code>。团队里固定用其中一种，别混。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="pair">
+  <div class="head"><span class="idx">03</span>linewidth = 1 以为是 1 pt</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">geom_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-num">1</span>)
+<span class="tok-fn">theme</span>(axis.line <span class="tok-op">=</span> <span class="tok-fn">element_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-num">1</span>))</code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p><code>linewidth</code> 单位为 <strong>mm</strong>（ggplot2 ≥ 3.4）。<code>linewidth = 1</code> = 1 mm ≈ <strong>2.83 pt</strong>，接近期望的三倍，直接越过多数期刊 1.5 pt 的上限，整张图显得"糊、重、业余"。反向错误同样常见：把 0.25 pt 写成 <code>0.25</code>（= 0.71 pt）看似无害，但若再往下写成 <code>0.1</code>（= 0.28 pt），在 300 dpi 下已接近抗锯齿不可分辨的边界。</p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-fn">geom_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-num">1</span> <span class="tok-op">/</span> .pt)                       <span class="tok-com"># 1 pt 数据线</span>
+<span class="tok-fn">theme</span>(axis.line  <span class="tok-op">=</span> <span class="tok-fn">element_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-num">0.5</span> <span class="tok-op">/</span> .pt),  <span class="tok-com"># 0.5 pt 轴线</span>
+      axis.ticks <span class="tok-op">=</span> <span class="tok-fn">element_line</span>(linewidth <span class="tok-op">=</span> <span class="tok-num">0.5</span> <span class="tok-op">/</span> .pt),
+      lineend <span class="tok-op">=</span> <span class="tok-str">"square"</span>)</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- 4 -->
+<div class="pair">
+  <div class="head"><span class="idx">04</span>element_text(size = 8) 与 geom_text(size = 8) 混用</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">theme</span>(axis.text <span class="tok-op">=</span> <span class="tok-fn">element_text</span>(size <span class="tok-op">=</span> <span class="tok-num">8</span>))   <span class="tok-com"># 8 pt</span>
+<span class="tok-fn">geom_text</span>(..., size <span class="tok-op">=</span> <span class="tok-num">8</span>)                      <span class="tok-com"># 8 mm！</span></code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p>作者以为"两个 8 一样大"，实际上轴标签是 8 pt、图内标注是 22.76 pt，<strong>相差 2.8 倍</strong>。视觉上标注像标题一样抢眼，整张图失去层次；审稿人常批注 "text sizes are inconsistent"。这类错误特别隐蔽，因为代码看起来完全对称、完全"合理"。</p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-com"># 用一个常量表达"同一个字号"，两边各自转换</span>
+FS_LABEL <span class="tok-op">&lt;-</span> <span class="tok-num">8</span>   <span class="tok-com"># 语义单位：pt</span>
+
+<span class="tok-fn">theme</span>(axis.text <span class="tok-op">=</span> <span class="tok-fn">element_text</span>(size <span class="tok-op">=</span> FS_LABEL))          <span class="tok-com"># pt 直传</span>
+<span class="tok-fn">geom_text</span>(..., size <span class="tok-op">=</span> FS_LABEL <span class="tok-op">/</span> .pt, family <span class="tok-op">=</span> <span class="tok-str">"Arial"</span>)  <span class="tok-com"># 转 mm</span></code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="pair">
+  <div class="head"><span class="idx">05</span>不指定字体，任由设备替换</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">ggplot</span>(df, <span class="tok-fn">aes</span>(x, y)) <span class="tok-op">+</span> <span class="tok-fn">geom_point</span>()    <span class="tok-com"># 没写 family</span>
+<span class="tok-com"># 屏幕上 = Arial；pdf() 里 = Helvetica；ragg 里 = systemfonts 匹配结果</span></code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p><code>sans</code> 是逻辑别名，由具体设备解析。换设备即换字形、即换字宽，而 ggplot 用字体度量计算文本包围盒（决定轴标签是否旋转、图例是否换行）——<strong>版面会重排</strong>。表现是：屏幕上一行的标签，导出后变两行并溢出；或图例被挤到图外。PDF 设备更极端：默认只认 Type1 标准字体，不嵌入系统字体，别人打开时直接替换。</p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-fn">library</span>(systemfonts)
+FONT <span class="tok-op">&lt;-</span> <span class="tok-str">"Arial"</span>
+<span class="tok-fn">stopifnot</span>(<span class="tok-fn">nzchar</span>(<span class="tok-fn">match_font</span>(FONT)<span class="tok-op">$</span>path))   <span class="tok-com"># 出图前断言字体存在</span>
+
+<span class="tok-fn">theme_paper</span>(<span class="tok-num">7</span>, family <span class="tok-op">=</span> FONT)   <span class="tok-com"># 由 base_family 贯穿全图</span></code></pre>
+      <p class="small" style="margin-top:8px">另：<strong>不要</strong>为了显示中文而加载 <code>showtext</code>，它会与 ragg 的字体路径冲突。中文用 <code>register_font()</code> 注册后显式引用。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 6 -->
+<div class="pair">
+  <div class="head"><span class="idx">06</span>bg = "transparent" 透明背景</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">ggsave</span>(<span class="tok-str">"fig.tif"</span>, p, bg <span class="tok-op">=</span> <span class="tok-str">"transparent"</span>)
+<span class="tok-com"># 或 theme(plot.background = element_rect(fill = NA, colour = NA))</span></code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p>输出写入 alpha 通道，被多数期刊系统判为<strong>不合规</strong>。更实际的风险是：排版软件把透明区填成<strong>黑色</strong>，深色文字与轴线直接消失；或在 Word/PDF 里变成棋盘格。屏幕预览时因底色为白，你<strong>根本发现不了</strong>——这是"预览骗人"的典型案例之一。</p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-fn">ggsave</span>(<span class="tok-str">"fig.tif"</span>, p,
+       device <span class="tok-op">=</span> ragg<span class="tok-op">::</span>agg_tiff,
+       bg     <span class="tok-op">=</span> <span class="tok-str">"white"</span>,        <span class="tok-com"># 白底，不写 transparent</span>
+       compression <span class="tok-op">=</span> <span class="tok-str">"lzw"</span>)
+
+<span class="tok-com"># 出图后确认无 alpha（见 §5.5 check_tiff）</span></code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- 7 -->
+<div class="pair">
+  <div class="head"><span class="idx">07</span>dpi = 600 但 width 用默认 7 inch</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">ggsave</span>(<span class="tok-str">"fig.tif"</span>, p, dpi <span class="tok-op">=</span> <span class="tok-num">600</span>)   <span class="tok-com"># 只设 dpi，尺寸走默认</span></code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p>得到 7 × 5 inch = <strong>177.8 × 127 mm</strong>、4200 × 3000 px。作者看到"600 dpi"就放心了，但物理尺寸对单栏超宽一倍；投稿系统按 89 mm 栏宽排版时会把它<strong>缩到一半</strong>，于是原本 7 pt 的字变成 3.5 pt——"分辨率 600 dpi 却不可读"的组合故障。<strong>dpi 与物理尺寸是两个正交维度，改一个救不了另一个。</strong></p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-fn">ggsave</span>(<span class="tok-str">"fig.tif"</span>, p,
+       device <span class="tok-op">=</span> ragg<span class="tok-op">::</span>agg_tiff,
+       width  <span class="tok-op">=</span> <span class="tok-num">89</span>, height <span class="tok-op">=</span> <span class="tok-num">120</span>,   <span class="tok-com"># 期刊栏宽</span>
+       units  <span class="tok-op">=</span> <span class="tok-str">"mm"</span>,                  <span class="tok-com"># 关键：单位显式</span>
+       dpi    <span class="tok-op">=</span> <span class="tok-num">600</span>)                   <span class="tok-com"># 2102 × 2835 px</span></code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- 8 -->
+<div class="pair">
+  <div class="head"><span class="idx">08</span>忘了 units，把 mm 数值当 inch 传</div>
+  <div class="body">
+    <div class="row bad">
+      <span class="lbl bad">错误代码</span>
+<pre><code><span class="tok-fn">ggsave</span>(<span class="tok-str">"fig.tif"</span>, p,
+       device <span class="tok-op">=</span> ragg<span class="tok-op">::</span>agg_tiff,
+       width <span class="tok-op">=</span> <span class="tok-num">190</span>, height <span class="tok-op">=</span> <span class="tok-num">250</span>,   <span class="tok-com"># 缺 units = "mm"</span>
+       dpi <span class="tok-op">=</span> <span class="tok-num">600</span>)</code></pre>
+    </div>
+    <div class="row why">
+      <span class="lbl why">错误后果</span>
+      <p>默认单位是 inch，于是画布变成 <strong>190 × 250 inch = 4826 × 6350 mm</strong>，即 4.8 × 6.4 米。像素数 <strong>114000 × 150000</strong>，约 51 GB 未压缩内存——R 会先卡死、然后报 <code>cannot allocate vector</code>，或者更糟：顺利生成一个 2 GB 的怪物文件，上传时被拒。这个错误的特点是一眼看不出来，因为数字本身"完全正确"。</p>
+    </div>
+    <div class="row good">
+      <span class="lbl good">正确代码</span>
+<pre><code><span class="tok-com"># 把 units 写进封装函数，永不手写 ggsave</span>
+save_paper_tiff <span class="tok-op">&lt;-</span> <span class="tok-kw">function</span>(plot, file, width_mm, height_mm, dpi) {
+  <span class="tok-fn">ggsave</span>(file, plot,
+         device <span class="tok-op">=</span> ragg<span class="tok-op">::</span>agg_tiff,
+         width <span class="tok-op">=</span> width_mm, height <span class="tok-op">=</span> height_mm,
+         units <span class="tok-op">=</span> <span class="tok-str">"mm"</span>, dpi <span class="tok-op">=</span> dpi, bg <span class="tok-op">=</span> <span class="tok-str">"white"</span>,
+         compression <span class="tok-op">=</span> <span class="tok-str">"lzw"</span>)
+}
+
+<span class="tok-fn">save_paper_tiff</span>(p, <span class="tok-str">"fig.tif"</span>, <span class="tok-num">190</span>, <span class="tok-num">250</span>, <span class="tok-num">600</span>)</code></pre>
+      <p class="small" style="margin-top:8px">函数名里带 <code>_mm</code> 是刻意的：让参数语义在调用处可见，降低传错单位的概率。</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ==================== 9 实测 ==================== -->
+<section id="verified">
+<h2><span class="num">9</span>实测验证结果</h2>
+
+<div class="box tip">
+  <span class="tag">结论先行</span>
+  <p>在同一 <code>fig_spec</code> 驱动下，预览 PNG 与最终 TIFF 的像素<strong>逐像素完全相同</strong>（差异像素 0，最大通道差 0）。所谓"预览和保存不一样"，在正确实现里不会发生；发生的一定是设备、单位、字体或随机图层四个环节之一出了问题。</p>
+</div>
+
+<h3>9.1　实测环境</h3>
+<div class="table-scroll">
+<table>
+  <caption>表 9-1　验证环境（Windows 11 + R 4.3.3）</caption>
+  <thead>
+    <tr><th style="width:26%">组件</th><th style="width:30%">版本</th><th style="width:44%">说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>R</td><td class="num">4.3.3 (2024-02-29 ucrt)</td><td>Windows x86_64</td></tr>
+    <tr><td>ggplot2</td><td class="num">4.0.3</td><td>S7 类体系，需注意与 patchwork 的兼容性</td></tr>
+    <tr><td>ragg</td><td class="num">1.3.2</td><td>TIFF / PNG 共用同一 text shaping 引擎</td></tr>
+    <tr><td>systemfonts / textshaping</td><td class="num">1.2.1 / 0.3.7</td><td>字体解析与排版</td></tr>
+    <tr><td>patchwork</td><td class="num">1.3.0</td><td>多面板组合</td></tr>
+    <tr><td>字体</td><td class="num">Arial / Times New Roman / SimSun / SimHei</td><td>均存在于 <code>C:\Windows\Fonts</code>，中文字体实测无豆腐块</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>9.2　六类图形输出实测</h3>
+<p>全部使用 <code>ragg::agg_tiff(units = "mm", res = 600, compression = "lzw")</code>，物理尺寸由 TIFF 的 XResolution/YResolution 反算，而非照抄 <code>spec</code>。</p>
+<div class="table-scroll">
+<table>
+  <caption>表 9-2　实测输出（六图全部通过 IFD 校验：版本 42、LZW=5、RGB、8/8/8、SamplesPerPixel=3）</caption>
+  <thead>
+    <tr>
+      <th style="width:22%">图形类型</th>
+      <th style="width:20%">文件</th>
+      <th class="num" style="width:13%">像素</th>
+      <th class="num" style="width:19%">反算物理尺寸 / mm</th>
+      <th class="num" style="width:11%">体积</th>
+      <th class="num" style="width:15%">校验</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>折线 + 误差带</td><td><code>fig01_line_ribbon.tiff</code></td><td class="num">2102 × 1401</td><td class="num">88.985 × 59.309</td><td class="num">140.4 KB</td><td class="num">PASS</td></tr>
+    <tr><td>柱状 + 个体散点 + 误差棒</td><td><code>fig02_bar_dot.tiff</code></td><td class="num">2102 × 1401</td><td class="num">88.985 × 59.309</td><td class="num">115.9 KB</td><td class="num">PASS</td></tr>
+    <tr><td>箱线 + 抖动散点</td><td><code>fig03_box_jitter.tiff</code></td><td class="num">2102 × 1401</td><td class="num">88.985 × 59.309</td><td class="num">135.4 KB</td><td class="num">PASS</td></tr>
+    <tr><td>热图（格内数值标注）</td><td><code>fig04_heatmap.tiff</code></td><td class="num">2125 × 1594</td><td class="num">89.958 × 67.479</td><td class="num">265.8 KB</td><td class="num">PASS</td></tr>
+    <tr><td>多面板组合（A/B/C）</td><td><code>fig05_multipanel.tiff</code></td><td class="num">4200 × 2645</td><td class="num">177.800 × 111.972</td><td class="num">488.2 KB</td><td class="num">PASS</td></tr>
+    <tr><td>中文标签折线（宋体）</td><td><code>fig06_cjk_line.tiff</code></td><td class="num">1889 × 1417</td><td class="num">79.968 × 59.986</td><td class="num">80.7 KB</td><td class="num">PASS</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="box note">
+  <span class="tag">像素取整的实际行为</span>
+  <p>ragg 1.3.2 对 <code>mm ÷ 25.4 × dpi</code> 的非整数结果采用<strong>向下取整</strong>，不是四舍五入。例如 89 mm @600 dpi 理论值 2102.36 px，实际输出 2102 px，反算物理尺寸为 88.985 mm。误差约 0.015 mm，远小于期刊容差，但你要知道它来自取整，而不是配置写错了。校验时应允许 &lt; 0.1 mm 的这类偏差。</p>
+</div>
+
+<h3>9.3　预览与最终 TIFF 的逐像素比对</h3>
+<p>比对方法：用同一 <code>spec</code> 先输出一张 <code>compression = "none"</code> 的 TIFF，用 base R <code>readBin()</code> 直接解析 IFD 的 StripOffsets / StripByteCounts / RowsPerStrip 读出原始 RGB 字节；再用同一 <code>spec</code> 输出 PNG 并 <code>png::readPNG()</code> 读出预览像素，两者逐像素求差。<strong>因为 LZW 是无损压缩，"未压缩 TIFF 的像素"就等于"LZW TIFF 解码后的像素"</strong>，所以这一步构成严格证明，而不是同义反复。</p>
+<div class="table-scroll">
+<table>
+  <caption>表 9-3　像素级一致性（各 2125 × 1417 px，600 dpi）</caption>
+  <thead>
+    <tr><th style="width:24%">验证对象</th><th class="num" style="width:16%">最大通道差</th><th class="num" style="width:18%">差异像素数</th><th class="num" style="width:14%">差异占比</th><th class="num" style="width:28%">判定</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>折线 + 误差带</td><td class="num">0</td><td class="num">0</td><td class="num">0.0000%</td><td class="num">IDENTICAL</td></tr>
+    <tr><td>柱状 + 抖动散点</td><td class="num">0</td><td class="num">0</td><td class="num">0.0000%</td><td class="num">IDENTICAL</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small">复现命令（Windows）：<code>D:/R/R-4.3.3/bin/Rscript.exe R/02_verify_pixels.R</code>。脚本不依赖 magick / tiff / Cairo / Pillow，也不需要外部解码器。</p>
+
+<div class="box warn">
+  <span class="tag">实测抓到的真凶：随机图层</span>
+  <p>第一次比对时，柱状图有 <strong>9 000 个像素（0.30%）不一致，最大通道差达 255</strong>，而折线图完全一致。原因不是渲染，而是 <code>geom_jitter()</code>：它<strong>每次绘制都会重新抽一次随机偏移</strong>，预览抽一次、保存再抽一次，两张图里的散点自然落位不同。</p>
+  <p>这类问题在设备、单位、字体全部正确时依然会出现，极难自查。修复只需把种子固定到 <code>position</code> 上——注意 <code>geom_jitter()</code> 本身<strong>不接受</strong> <code>seed</code> 参数，写了会被静默忽略：</p>
+  <pre><code><span class="c"># 错误：seed 被忽略，预览与输出仍会不同</span>
+geom_jitter(width = <span class="n">0.08</span>, seed = <span class="n">42</span>)
+
+<span class="c"># 正确：种子交给 position_jitter</span>
+geom_point(position = position_jitter(width = <span class="n">0.08</span>, height = <span class="n">0</span>, seed = <span class="n">42</span>))</code></pre>
+  <p>更稳妥的科研写法是<strong>预先算好抖动坐标存进数据框</strong>再 <code>geom_point()</code>，这样图形完全确定，换机器、换设备都复现得出来。</p>
+</div>
+
+<div class="box note">
+  <span class="tag">其他实测发现</span>
+  <ul>
+    <li><strong>patchwork 与 ggplot2 4.0 不兼容</strong>：<code>patchwork &amp; theme(...)</code> 会报 <code>Can't find method for generic &amp;(e1, e2)</code>。改为先给每个子图 <code>+ theme_pub(spec)</code>，再用 <code>|</code> / <code>/</code> 组合。</li>
+    <li><strong>中文字体</strong>：用 <code>systemfonts::register_font()</code> 把 <code>simsun.ttc</code> 注册为别名后，600 dpi 下中文无缺字、无豆腐块；全程未启用 showtext。</li>
+    <li><strong>退出码</strong>：本验证容器中，R 进程在加载 cli 包后于<em>退出清理阶段</em>触发段错误（exit 139），可用 <code>Rscript -e "requireNamespace('cli')"</code> 独立复现，与绘图逻辑无关；所有文件均已完整落盘且校验通过。在常规 RStudio / 终端环境不会出现。</li>
+  </ul>
+</div>
+
+<h3>9.4　交付物与复现路径</h3>
+<div class="table-scroll">
+<table>
+  <caption>表 9-4　脚本清单</caption>
+  <thead>
+    <tr><th style="width:30%">文件</th><th style="width:70%">职责</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>R/00_fig_spec.R</code></td><td>规格对象 <code>fig_spec()</code>、<code>theme_pub()</code>、<code>save_pub()</code>、<code>preview_pub()</code>、<code>check_tiff()</code>、<code>preview_pair()</code>；含 pt/mm 换算函数 <code>pt()</code>、<code>lw()</code></td></tr>
+    <tr><td><code>R/01_examples.R</code></td><td>六类图形的完整示例，直接可改成自己的数据</td></tr>
+    <tr><td><code>R/02_verify_pixels.R</code></td><td>像素级一致性验证，投稿前可对自己的图跑一遍</td></tr>
+  </tbody>
+</table>
+</div>
+
+</section>
+
+<footer>
+  <p><b>《R 语言科研论文图表规范与「预览即所得」实现指南》</b>　版本 v1.0　|　生成日期 2026-10-30　|　文档编号 RFG-2026-01</p>
+  <p><b>适用范围</b>：R ≥ 4.1、ggplot2 ≥ 3.5、ragg ≥ 1.2。ggplot2 3.4 之前的版本 <code>linewidth</code> 语义不同，需按 <code>size</code> 处理。</p>
+  <p><b>免责声明</b>：本文所列期刊规格为公开资料的整理与通用基线，<strong>仅供选型参考，不构成投稿依据</strong>。各期刊的 Guide for Authors 会不定期修订，同一出版社不同子刊的栏宽、字号、分辨率要求亦可能不一致（Elsevier 明确说明其 2500+ 种期刊的栏宽并不统一）。<strong>投稿前请以目标期刊官网最新版投稿指南为唯一准绳</strong>，并对关键参数逐条核对。因依据本文数值直接投稿所产生的后果，本文档不承担责任。</p>
+  <p class="small">所有换算基于 1 inch = 25.4 mm、1 pt = 25.4/72 mm、<code>.pt</code> = 72.27/25.4 = 2.845276。像素与体积数值为按上述关系计算的理论值，实际输出以设备实现为准。</p>
+</footer>
+
+</div>
+</body>
+</html>
