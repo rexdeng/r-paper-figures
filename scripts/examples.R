@@ -70,9 +70,11 @@ spec_heat <- fig_spec(
 spec_multi <- fig_spec(
   journal = "acs", column = "double", aspect = "custom", height_mm = 112,
   content = "combination", dpi = 600, base_size = 8,
-  font_family = "Arial", line_pt = 0.75, data_line_pt = 1.0,
-  margin_mm = c(3, 3, 3, 3)
+  font_family = "Arial", line_pt = 0.75, data_line_pt = 1.0
 )
+# 拼图的内侧边距要单独压小：patchwork 的子图间距 = 两个 plot.margin 之和，
+# 若各留 1.7 mm 会得到 3.4 mm，超出 2-3 mm 的推荐区间。下面组合时把朝向
+# 相邻子图的那一侧改成 1.0 mm，外侧仍保留 1.7 mm。
 
 palette2 <- c(Control = "#0072B2", Treatment = "#D55E00")
 palette3 <- c(A = "#0072B2", B = "#E69F00", C = "#009E73")
@@ -200,8 +202,10 @@ p_heat <- ggplot2::ggplot(
   ggplot2::geom_tile(colour = "white", linewidth = lw(0.4)) +
   ggplot2::geom_text(
     ggplot2::aes(label = sprintf("%.1f", value), colour = label_colour),
-    # geom_text 的 size 是 mm；pt(7) 才表示 7 pt，绝不能直接写 size = 7。
-    size = pt(7), family = spec_heat$font_family, show.legend = FALSE
+    # geom_text 的 size 是 mm；pt() 才把 pt 换成 mm。图内注释取 L5 = 5.5 pt，
+    # 绝不直接写 size = 7（那是 7 mm，约 19.9 pt）。
+    size = pt(spec_heat$sizes[["annotation"]]),
+    family = spec_heat$font_family, show.legend = FALSE
   ) +
   ggplot2::scale_colour_identity() +
   ggplot2::scale_fill_gradient2(
@@ -221,16 +225,26 @@ p_heat <- ggplot2::ggplot(
 # ggplot2 4.0.3 已将 theme 迁移到 S7；patchwork 1.3.0 中 `patchwork & theme`
 # 的旧式运算符分派会报错。因此先把同一个 theme_pub(spec_multi) 显式加到每个
 # 子图，再组合。这样既规避版本组合的分派问题，也确保字号/字体/边距完全一致。
-p_line_multi <- p_line + theme_pub(spec_multi) + ggplot2::theme(legend.position = "none")
-p_bar_multi <- p_bar + theme_pub(spec_multi) + ggplot2::theme(legend.position = "none")
+p_line_multi <- p_line + theme_pub(spec_multi) + ggplot2::theme(
+  legend.position = "none",
+  plot.margin = ggplot2::margin(1.7, 1.0, 1.0, 1.7, unit = "mm")  # 右侧、下方为内侧
+)
+p_bar_multi <- p_bar + theme_pub(spec_multi) + ggplot2::theme(
+  legend.position = "none",
+  plot.margin = ggplot2::margin(1.7, 1.7, 1.0, 1.0, unit = "mm")  # 左侧、下方为内侧
+)
 p_heat_multi <- p_heat + theme_pub(spec_multi) + ggplot2::theme(
   axis.line = ggplot2::element_blank(),
   axis.ticks = ggplot2::element_blank(),
-  legend.position = "right"
+  legend.position = "right",
+  plot.margin = ggplot2::margin(1.0, 1.0, 1.7, 1.7, unit = "mm")  # 上方、右侧为内侧
 )
 p_multi <- (
   p_line_multi + p_bar_multi + p_heat_multi +
     patchwork::plot_layout(ncol = 2, widths = c(1, 1), guides = "keep") +
+    # 拼图的 A/B/C 由 patchwork 在 patch 层绘制，是 plot 级定位（不是面板级），
+    # 落在 1.7 mm 的外边距内；单图的 panel label 才用 theme_pub() 的 c(0, 1)。
+    # 注意 patchwork 1.3.0 会忽略子图自带的 labs(tag=)，不要指望它生效。
     patchwork::plot_annotation(tag_levels = "A")
 )
 
@@ -469,12 +483,14 @@ report_lines <- c(
   "",
   "1. 本机 ragg 1.3.2 写出的 TIFF `ResolutionUnit` 以实测表为准；代码同时正确处理 tag=2（inch）和 tag=3（cm），tag=3 时 dpi = resolution × 2.54。",
   "2. ggplot2 4.0.3（S7）下，`element_line(linewidth=...)`、`geom_line(linewidth=...)` 和 patchwork 的 `+` 组合实测可用；但 patchwork 1.3.0 的旧式 `patchwork & theme` 与 S7 theme 分派冲突。本脚本改为先向每个子图添加同一 `theme_pub(spec_multi)`，再组合，且未对线条使用已废弃的 `size`。",
-  "3. `geom_text(size=...)` 仍按 mm 解释，因此热图/中文注释统一写 `size=pt(7/8)`；`theme()` 字号仍直接使用 pt。",
-  "4. ragg 1.3.2 对 mm × dpi / 25.4 的非整数像素实测采用向下取整（`floor`），不是 `round`；因此反算物理尺寸会出现远小于 0.5 mm 的舍入误差，这是预期行为。",
-  "5. TIFF 使用白底 RGB、8 bit/通道；R/ragg 不承担 CMYK 色彩管理。若期刊要求 CMYK，应在投稿前使用具备 ICC 色彩管理的外部软件转换并复核颜色。",
-  "6. TIFF 为位图，因此不存在 PDF/EPS 的字体嵌入问题；但源脚本仍必须显式指定并确认字体，以保证字形可复现。",
-  "7. 当前 WorkBuddy 宿主中，R 载入 `cli` 后会在进程清理阶段触发 Windows 异常码 `0xC0000005`；以最小命令 `requireNamespace('cli')` 可独立复现，故并非本脚本绘图/校验逻辑导致。脚本主体已运行到末行、全部文件已落盘且六项 TIFF 校验均 PASS；在普通 Windows 终端复验时仍应确认最终进程退出码。",
-  "8. ragg 1.3.2 的 LZW 采用 early change 码宽约定（实测：标准约定会在第 258 个码失步，early change 精确解到 EOI 且长度吻合）。自研解码器已在 `00_fig_spec.R` 内置并用未压缩真值交叉验证。",
+  "3. `geom_text(size=...)` 仍按 mm 解释，因此热图/中文注释统一写 `size = pt(spec$sizes[[\"annotation\"]])`；`theme()` 字号仍直接使用 pt。",
+  "4. `linewidth` 名义 mm 只画出 0.7528 倍（ggplot2 把 mm×.pt 塞进 `gpar(lwd)`，而 lwd 单位是 1/96 inch）。`lw(T)` 已按 `T×0.4679` 补偿，`lwb(T)` 供 `panel.border` 使用（外侧一半被视口裁掉，需再乘 2）。写 `T×0.3528` 会得到 0.75 T，普遍偏细。",
+  "5. `plot.margin` 不等于可见白边：顶部 y 刻度标签溢出约 0.66 mm、数值定位 tag 溢出约 0.68 mm、轴线布局占位约 0.15 mm。默认 1.7 mm 设定对应四边可见 1.02-1.69 mm，验收请用 `check_margin()` 量像素。",
+  "6. ragg 1.3.2 对 mm × dpi / 25.4 的非整数像素实测采用向下取整（`floor`），不是 `round`；因此反算物理尺寸会出现远小于 0.5 mm 的舍入误差，这是预期行为。",
+  "7. TIFF 使用白底 RGB、8 bit/通道；R/ragg 不承担 CMYK 色彩管理。若期刊要求 CMYK，应在投稿前使用具备 ICC 色彩管理的外部软件转换并复核颜色。",
+  "8. TIFF 为位图，因此不存在 PDF/EPS 的字体嵌入问题；但源脚本仍必须显式指定并确认字体，以保证字形可复现。",
+  "9. 当前 WorkBuddy 宿主中，R 载入 `cli` 后会在进程清理阶段触发 Windows 异常码 `0xC0000005`；以最小命令 `requireNamespace('cli')` 可独立复现，故并非本脚本绘图/校验逻辑导致。脚本主体已运行到末行、全部文件已落盘且六项 TIFF 校验均 PASS；在普通 Windows 终端复验时仍应确认最终进程退出码。",
+  "10. ragg 1.3.2 的 LZW 采用 early change 码宽约定（实测：标准约定会在第 258 个码失步，early change 精确解到 EOI 且长度吻合）。自研解码器已在 `00_fig_spec.R` 内置并用未压缩真值交叉验证。",
   "",
   "## ggplot2 4.0 兼容性注意事项（作者雷区）",
   "",
@@ -482,7 +498,7 @@ report_lines <- c(
   "- **线条一律用 `linewidth`**，不要再用 `size` 控制线宽；`size` 在 geom_line/element_line 上已废弃。",
   "- **`geom_text()`/`annotate()` 的 `size` 仍是 mm**，8 pt 必须写 `pt(8)`；`theme()` 里的 `size` 才是 pt。两种单位并存是 4.0 仍保留的历史包袱。",
   "- `theme_classic(base_family=)` 与 `element_text(family=)` 要同时给，否则子图/facet 可能继承默认 sans。",
-  "- patchwork 的 `plot_annotation(tag_levels = \"A\")` 与 `theme(plot.tag=)` 搭配可统一 A/B/C 标注字号；本脚本把 tag 字号固定在 `base_size + 1` pt。",
+  "- patchwork 的 `plot_annotation(tag_levels = \"A\")` 与 `theme(plot.tag=)` 搭配可统一 A/B/C 标注字号；本脚本的 tag 字号取 `TYPE_SCALE[[\"tag\"]]`（8 pt 粗体），位置用 `c(0, 1)` 以免推挤面板。",
   "",
   "## 科研作者最容易踩的 5 个坑",
   "",

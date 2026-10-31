@@ -16,7 +16,7 @@ R 生态里同时存在两种 pt：ggplot2 内部对字号用 TeX pt（`.pt = 72
 |---|---|---|
 | `theme(element_text(size = ))` | **pt** | `size = 8` |
 | `geom_text()` / `annotate("text")` 的 `size` 美学 | **mm** | `size = 8 / 2.845276` → 用 `pt(8)` |
-| `linewidth`（ggplot2 ≥ 3.4） | **mm** | `0.75 pt` → `linewidth = 0.75 * 0.352778` → 用 `lw(0.75)` |
+| `linewidth`（ggplot2 ≥ 3.4） | **mm**，且只画出 0.7528 倍 | `0.75 pt` → `linewidth = 0.75 * 0.4679` → 用 `lw(0.75)` |
 | `geom_point(size = )` | **mm**（直径） | 点大小按视觉定，不用 pt 换算 |
 | `ggsave(width =, height =)` | **inch**（默认） | 显式写 `units = "mm"` |
 | `ragg::agg_tiff(width =, height =)` | **inch**（默认） | 显式写 `units = "mm"` |
@@ -87,5 +87,6 @@ dpi 只写元数据，**不会增加像素**。
 source("scripts/fig_spec.R")
 check_units()          # 打印换算表
 pt(8)                  # 2.8122  —— 传给 geom_text 的 size
-lw(0.75)               # 0.2646  —— 传给 linewidth
+lw(0.75)               # 0.3509  —— 传给 linewidth（= 0.75*0.4679，已补偿）
+lwb(0.75)              # 0.7019  —— 传给 panel.border（外侧一半被裁，需乘 2）
 ```
